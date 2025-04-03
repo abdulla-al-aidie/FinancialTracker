@@ -12,7 +12,8 @@ import {
   Scenario,
   ExpenseCategory,
   GoalType,
-  UserProfile
+  UserProfile,
+  MonthData
 } from "../types/finance";
 
 // Default user profile
@@ -29,6 +30,12 @@ interface FinanceContextType {
   // User profile
   userProfile: UserProfile;
   updateUserProfile: (profile: UserProfile) => void;
+  
+  // Month Selection
+  months: MonthData[];
+  activeMonth: string; // YYYY-MM format
+  setActiveMonth: (monthId: string) => void;
+  addMonth: (monthName: string) => void;
   
   // Income
   incomes: Income[];
@@ -84,18 +91,50 @@ interface FinanceContextType {
   categorizeExpense: (description: string) => ExpenseCategory;
   generateRecommendations: () => Promise<void>;
   checkBudgetAlerts: () => void;
+  compareWithPreviousMonth: () => { incomeChange: number; expenseChange: number; savingsChange: number };
 }
 
 // Create context
 const FinanceContext = createContext<FinanceContextType | undefined>(undefined);
 
+// Helper function to get current month in YYYY-MM format
+const getCurrentMonthId = (): string => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+};
+
+// Helper function to get month name
+const getMonthName = (monthId: string): string => {
+  const [year, month] = monthId.split('-');
+  const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+  return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+};
+
 // Provider component
 export function FinanceProvider({ children }: { children: ReactNode }) {
   // State for all financial data
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
-  const [incomes, setIncomes] = useState<Income[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [budgets, setBudgets] = useState<Budget[]>([]);
+  
+  // Month data
+  const [months, setMonths] = useState<MonthData[]>(() => {
+    // Initialize with current month
+    const currentMonthId = getCurrentMonthId();
+    return [
+      { 
+        id: currentMonthId, 
+        name: getMonthName(currentMonthId),
+        isActive: true
+      }
+    ];
+  });
+  const [activeMonth, setActiveMonth] = useState<string>(getCurrentMonthId());
+  
+  // Financial data by month
+  const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>({});
+  const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>({});
+  const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>({});
+  
+  // Data shared across all months
   const [goals, setGoals] = useState<Goal[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -110,23 +149,67 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const { toast } = useToast();
   
+  // Computed properties for current month's data
+  const incomes = allIncomes[activeMonth] || [];
+  const expenses = allExpenses[activeMonth] || [];
+  const budgets = allBudgets[activeMonth] || [];
+  
   // Load data from localStorage on initial render
   useEffect(() => {
     const savedUserProfile = localStorage.getItem("userProfile");
-    const savedIncomes = localStorage.getItem("incomes");
-    const savedExpenses = localStorage.getItem("expenses");
-    const savedBudgets = localStorage.getItem("budgets");
     const savedGoals = localStorage.getItem("goals");
     const savedDebts = localStorage.getItem("debts");
     const savedScenarios = localStorage.getItem("scenarios");
+    const savedMonths = localStorage.getItem("months");
     
+    // Load shared data that persists across months
     if (savedUserProfile) setUserProfile(JSON.parse(savedUserProfile));
-    if (savedIncomes) setIncomes(JSON.parse(savedIncomes));
-    if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-    if (savedBudgets) setBudgets(JSON.parse(savedBudgets));
     if (savedGoals) setGoals(JSON.parse(savedGoals));
     if (savedDebts) setDebts(JSON.parse(savedDebts));
     if (savedScenarios) setScenarios(JSON.parse(savedScenarios));
+    
+    // Load months data or initialize with current month if none exists
+    if (savedMonths) {
+      const parsedMonths = JSON.parse(savedMonths);
+      setMonths(parsedMonths);
+      
+      // Find active month
+      const activeMonthData = parsedMonths.find((m: MonthData) => m.isActive);
+      if (activeMonthData) {
+        setActiveMonth(activeMonthData.id);
+      }
+    } else {
+      // Save the initialized current month
+      localStorage.setItem("months", JSON.stringify(months));
+    }
+    
+    // Load month-specific data for active month
+    const monthId = activeMonth;
+    const savedMonthIncomes = localStorage.getItem(`incomes_${monthId}`);
+    const savedMonthExpenses = localStorage.getItem(`expenses_${monthId}`);
+    const savedMonthBudgets = localStorage.getItem(`budgets_${monthId}`);
+    
+    // Initialize month data records
+    const incomesRecord: Record<string, Income[]> = {};
+    const expensesRecord: Record<string, Expense[]> = {};
+    const budgetsRecord: Record<string, Budget[]> = {};
+    
+    if (savedMonthIncomes) {
+      incomesRecord[monthId] = JSON.parse(savedMonthIncomes);
+    }
+    
+    if (savedMonthExpenses) {
+      expensesRecord[monthId] = JSON.parse(savedMonthExpenses);
+    }
+    
+    if (savedMonthBudgets) {
+      budgetsRecord[monthId] = JSON.parse(savedMonthBudgets);
+    }
+    
+    // Set state with loaded data
+    setAllIncomes(incomesRecord);
+    setAllExpenses(expensesRecord);
+    setAllBudgets(budgetsRecord);
     
     // Generate initial recommendations and alerts
     setTimeout(() => {
@@ -333,8 +416,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addIncome = (income: Omit<Income, "id">) => {
     const newIncome = { ...income, id: Date.now() };
     const updatedIncomes = [...incomes, newIncome];
-    setIncomes(updatedIncomes);
-    localStorage.setItem("incomes", JSON.stringify(updatedIncomes));
+    
+    // Update state with new income for current month
+    setAllIncomes({
+      ...allIncomes,
+      [activeMonth]: updatedIncomes
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
     
     toast({
       title: "Income Added",
@@ -345,8 +435,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const updateIncome = (income: Income) => {
     const updatedIncomes = incomes.map(inc => inc.id === income.id ? income : inc);
-    setIncomes(updatedIncomes);
-    localStorage.setItem("incomes", JSON.stringify(updatedIncomes));
+    
+    // Update state with updated incomes for current month
+    setAllIncomes({
+      ...allIncomes,
+      [activeMonth]: updatedIncomes
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
     
     toast({
       title: "Income Updated",
@@ -357,8 +454,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const deleteIncome = (id: number) => {
     const updatedIncomes = incomes.filter(inc => inc.id !== id);
-    setIncomes(updatedIncomes);
-    localStorage.setItem("incomes", JSON.stringify(updatedIncomes));
+    
+    // Update state with filtered incomes for current month
+    setAllIncomes({
+      ...allIncomes,
+      [activeMonth]: updatedIncomes
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
     
     toast({
       title: "Income Deleted",
@@ -371,8 +475,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addExpense = (expense: Omit<Expense, "id">) => {
     const newExpense = { ...expense, id: Date.now() };
     const updatedExpenses = [...expenses, newExpense];
-    setExpenses(updatedExpenses);
-    localStorage.setItem("expenses", JSON.stringify(updatedExpenses));
+    
+    // Update state with new expense for current month
+    setAllExpenses({
+      ...allExpenses,
+      [activeMonth]: updatedExpenses
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -389,8 +500,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const updateExpense = (expense: Expense) => {
     const updatedExpenses = expenses.map(exp => exp.id === expense.id ? expense : exp);
-    setExpenses(updatedExpenses);
-    localStorage.setItem("expenses", JSON.stringify(updatedExpenses));
+    
+    // Update state with updated expenses for current month
+    setAllExpenses({
+      ...allExpenses,
+      [activeMonth]: updatedExpenses
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -407,8 +525,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const deleteExpense = (id: number) => {
     const updatedExpenses = expenses.filter(exp => exp.id !== id);
-    setExpenses(updatedExpenses);
-    localStorage.setItem("expenses", JSON.stringify(updatedExpenses));
+    
+    // Update state with filtered expenses for current month
+    setAllExpenses({
+      ...allExpenses,
+      [activeMonth]: updatedExpenses
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -432,8 +557,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ...updatedBudgets[existingBudgetIndex], 
         limit 
       };
-      setBudgets(updatedBudgets);
-      localStorage.setItem("budgets", JSON.stringify(updatedBudgets));
+      
+      // Update state with updated budgets for current month
+      setAllBudgets({
+        ...allBudgets,
+        [activeMonth]: updatedBudgets
+      });
+      
+      // Save to localStorage
+      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
     } else {
       // Create new budget
       const newBudget: Budget = {
@@ -442,8 +574,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         spent: 0
       };
       const updatedBudgets = [...budgets, newBudget];
-      setBudgets(updatedBudgets);
-      localStorage.setItem("budgets", JSON.stringify(updatedBudgets));
+      
+      // Update state with new budgets for current month
+      setAllBudgets({
+        ...allBudgets,
+        [activeMonth]: updatedBudgets
+      });
+      
+      // Save to localStorage
+      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
     }
     
     // Update budget spent amount
@@ -463,8 +602,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const updatedBudgets = budgets.map(b => 
       b.category === budget.category ? budget : b
     );
-    setBudgets(updatedBudgets);
-    localStorage.setItem("budgets", JSON.stringify(updatedBudgets));
+    
+    // Update state with updated budgets for current month
+    setAllBudgets({
+      ...allBudgets,
+      [activeMonth]: updatedBudgets
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
     
     toast({
       title: "Budget Updated",
@@ -485,8 +631,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return { ...budget, spent };
     });
     
-    setBudgets(updatedBudgets);
-    localStorage.setItem("budgets", JSON.stringify(updatedBudgets));
+    // Update state with updated budgets for current month
+    setAllBudgets({
+      ...allBudgets,
+      [activeMonth]: updatedBudgets
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
   };
   
   // Goal management
@@ -627,6 +779,120 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
   };
   
+  // Month management
+  const setActiveMonthHandler = (monthId: string) => {
+    // Update active month in state
+    setActiveMonth(monthId);
+    
+    // Update months array to reflect active month
+    const updatedMonths = months.map(month => ({
+      ...month,
+      isActive: month.id === monthId
+    }));
+    setMonths(updatedMonths);
+    
+    // Save updated months to localStorage
+    localStorage.setItem("months", JSON.stringify(updatedMonths));
+    
+    toast({
+      title: "Month Changed",
+      description: `You are now viewing data for ${getMonthName(monthId)}`,
+      variant: "default"
+    });
+    
+    // Force recalculation of summary data for the selected month
+    calculateSummaryData();
+  };
+  
+  const addMonthHandler = (monthName: string) => {
+    const date = new Date(monthName);
+    const monthId = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    
+    // Check if month already exists
+    if (months.some(m => m.id === monthId)) {
+      toast({
+        title: "Month Already Exists",
+        description: `${getMonthName(monthId)} is already available`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Add new month
+    const newMonth: MonthData = {
+      id: monthId,
+      name: getMonthName(monthId),
+      isActive: false
+    };
+    
+    // If this is the first month for this month/year, copy budgets from previous month
+    if (!allBudgets[monthId]) {
+      // Find most recent month with budgets
+      const monthsWithBudgets = Object.keys(allBudgets);
+      if (monthsWithBudgets.length > 0) {
+        // Sort months and get the most recent one
+        const mostRecentMonth = monthsWithBudgets.sort().pop();
+        if (mostRecentMonth) {
+          // Copy budgets but reset spent amount
+          const newBudgets = allBudgets[mostRecentMonth].map(budget => ({
+            ...budget,
+            spent: 0
+          }));
+          setAllBudgets({
+            ...allBudgets,
+            [monthId]: newBudgets
+          });
+          
+          // Save to localStorage
+          localStorage.setItem(`budgets_${monthId}`, JSON.stringify(newBudgets));
+        }
+      }
+    }
+    
+    // Update months array
+    const updatedMonths = [...months, newMonth];
+    setMonths(updatedMonths);
+    
+    // Save updated months to localStorage
+    localStorage.setItem("months", JSON.stringify(updatedMonths));
+    
+    toast({
+      title: "Month Added",
+      description: `${getMonthName(monthId)} has been added to your tracking`,
+      variant: "default"
+    });
+  };
+  
+  const compareWithPreviousMonth = () => {
+    // Get the previous month
+    const [year, month] = activeMonth.split('-').map(Number);
+    let prevYear = year;
+    let prevMonth = month - 1;
+    
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear--;
+    }
+    
+    const prevMonthId = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+    
+    // Get income and expenses for previous month
+    const prevIncomes = allIncomes[prevMonthId] || [];
+    const prevExpenses = allExpenses[prevMonthId] || [];
+    
+    // Calculate totals
+    const prevTotalIncome = prevIncomes.reduce((sum, inc) => sum + inc.amount, 0);
+    const prevTotalExpenses = prevExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const prevSavings = prevTotalIncome - prevTotalExpenses;
+    
+    // Calculate changes
+    const incomeChange = totalIncome - prevTotalIncome;
+    const expenseChange = totalExpenses - prevTotalExpenses;
+    const savingsChange = netCashflow - prevSavings;
+    
+    return { incomeChange, expenseChange, savingsChange };
+  };
+  
   // User profile management
   const updateUserProfile = (profile: UserProfile) => {
     setUserProfile(profile);
@@ -642,43 +908,71 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   return (
     <FinanceContext.Provider
       value={{
+        // User profile
         userProfile,
         updateUserProfile,
+        
+        // Month Selection
+        months,
+        activeMonth,
+        setActiveMonth: setActiveMonthHandler,
+        addMonth: addMonthHandler,
+        
+        // Income
         incomes,
         addIncome,
         updateIncome,
         deleteIncome,
+        
+        // Expenses
         expenses,
         addExpense,
         updateExpense,
         deleteExpense,
+        
+        // Budgets
         budgets,
         setBudget,
         updateBudget,
+        
+        // Goals
         goals,
         addGoal,
         updateGoal,
         deleteGoal,
+        
+        // Debts
         debts,
         addDebt,
         updateDebt,
         deleteDebt,
+        
+        // Recommendations
         recommendations,
         markRecommendationAsRead,
+        
+        // Alerts
         alerts,
         markAlertAsRead,
         clearAllAlerts,
+        
+        // Scenarios
         scenarios,
         addScenario,
         updateScenario,
         deleteScenario,
+        
+        // Summary data
         totalIncome,
         totalExpenses,
         netCashflow,
         savingsRate,
+        
+        // Helper functions
         categorizeExpense,
         generateRecommendations,
-        checkBudgetAlerts
+        checkBudgetAlerts,
+        compareWithPreviousMonth
       }}
     >
       {children}

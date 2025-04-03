@@ -113,3 +113,10 @@ export interface UserProfile {
   goalPreference: GoalType;
   notificationsEnabled: boolean;
 }
+
+// Month data for tracking finances by month
+export interface MonthData {
+  id: string; // Format: YYYY-MM (e.g., "2023-04" for April 2023)
+  name: string; // Display name (e.g., "April 2023")
+  isActive: boolean;
+}
