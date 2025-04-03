@@ -16,7 +16,8 @@ import {
   TrendingUp,
   Landmark,
   CalendarDays,
-  PlusCircle
+  PlusCircle,
+  FileText
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -830,11 +831,16 @@ export default function Dashboard() {
                   </div>
                   
                   <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Data Management</h3>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" className="w-full">Export Data</Button>
-                      <Button variant="outline" className="w-full">Import Data</Button>
+                    <h3 className="text-sm font-medium">Monthly Reports</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        <span>Generate Monthly Finance Report</span>
+                      </Button>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Download a comprehensive report of your income, expenses, and savings for the current month
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
