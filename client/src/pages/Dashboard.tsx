@@ -35,6 +35,7 @@ import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import MonthSelector from "@/components/MonthSelector";
+import ApiKeyTester from "@/components/ApiKeyTester";
 
 export default function Dashboard() {
   const { 
@@ -837,6 +838,17 @@ export default function Dashboard() {
           
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-4">
+            {/* API Key Tester */}
+            <Card>
+              <CardHeader>
+                <CardTitle>API Connection</CardTitle>
+                <CardDescription>Test your OpenAI API key connection</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ApiKeyTester />
+              </CardContent>
+            </Card>
+            
             <Card>
               <CardHeader>
                 <CardTitle>Account Settings</CardTitle>
