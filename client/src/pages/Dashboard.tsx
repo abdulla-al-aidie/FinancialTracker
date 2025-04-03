@@ -30,6 +30,10 @@ import GoalFormModal from "@/components/GoalFormModal";
 import IncomeFormModal from "@/components/IncomeFormModal";
 import ExpenseFormModal from "@/components/ExpenseFormModal";
 import DebtFormModal from "@/components/DebtFormModal";
+import ProfileModal from "@/components/ProfileModal";
+import CurrencyModal from "@/components/CurrencyModal";
+import ReportGeneratorModal from "@/components/ReportGeneratorModal";
+import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 
 export default function Dashboard() {
   const { 
@@ -54,6 +58,11 @@ export default function Dashboard() {
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
+  
+  // State for settings modals
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
+  const [generateReportModalOpen, setGenerateReportModalOpen] = useState(false);
   
   // State for selected items for editing
   const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>(undefined);
@@ -145,6 +154,21 @@ export default function Dashboard() {
   const handleDebtClick = (debt: Debt) => {
     setSelectedDebt(debt);
     setDebtModalOpen(true);
+  };
+  
+  // Handler for generating monthly financial report
+  const handleGenerateReport = () => {
+    setGenerateReportModalOpen(true);
+  };
+  
+  // Handler for edit profile
+  const handleEditProfile = () => {
+    setProfileModalOpen(true);
+  };
+  
+  // Handler for change currency
+  const handleChangeCurrency = () => {
+    setCurrencyModalOpen(true);
   };
   
   return (
@@ -776,38 +800,32 @@ export default function Dashboard() {
           
           {/* Insights Tab */}
           <TabsContent value="insights" className="space-y-4">
+            <AIInsightsGenerator />
+            
             <Card>
               <CardHeader>
-                <CardTitle>AI Insights</CardTitle>
-                <CardDescription>Personalized financial analysis and recommendations</CardDescription>
+                <CardTitle>Recommendations</CardTitle>
+                <CardDescription>Personalized suggestions to improve your finances</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {/* Sample insights */}
-                  <Alert>
-                    <AlertTitle>Spending Pattern</AlertTitle>
-                    <AlertDescription>
-                      Your spending on Entertainment has increased by 15% this month compared to your average.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <Alert>
-                    <AlertTitle>Saving Opportunity</AlertTitle>
-                    <AlertDescription>
-                      Reducing your Food expenses by 10% would allow you to reach your Emergency Fund goal 2 months earlier.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <Alert>
-                    <AlertTitle>Debt Strategy</AlertTitle>
-                    <AlertDescription>
-                      Increasing your monthly payment on your highest interest debt by $50 would save you $340 in interest over time.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <Button className="w-full" variant="outline">
-                    Generate New Insights
-                  </Button>
+                  {sortedRecommendations.length > 0 ? (
+                    sortedRecommendations.slice(0, 3).map((rec) => (
+                      <Alert key={rec.id} variant={rec.isRead ? "default" : "default"} className={rec.isRead ? "" : "border-primary"}>
+                        <AlertTitle className="flex items-center gap-2">
+                          {rec.type}
+                          {!rec.isRead && <Badge variant="secondary" className="text-xs">New</Badge>}
+                        </AlertTitle>
+                        <AlertDescription>
+                          {rec.description}
+                        </AlertDescription>
+                      </Alert>
+                    ))
+                  ) : (
+                    <div className="py-4 text-center text-gray-500">
+                      <p>Generate new insights to see recommendations</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -825,15 +843,31 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Profile</h3>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" className="w-full">Edit Profile</Button>
-                      <Button variant="outline" className="w-full">Change Currency</Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={handleEditProfile}
+                      >
+                        Edit Profile
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={handleChangeCurrency}
+                      >
+                        Change Currency
+                      </Button>
                     </div>
                   </div>
                   
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Monthly Reports</h3>
                     <div className="grid grid-cols-1 gap-2">
-                      <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        className="w-full flex items-center justify-center gap-2"
+                        onClick={handleGenerateReport}
+                      >
                         <FileText className="h-4 w-4" />
                         <span>Generate Monthly Finance Report</span>
                       </Button>
@@ -890,6 +924,22 @@ export default function Dashboard() {
         open={debtModalOpen}
         onClose={() => setDebtModalOpen(false)}
         debt={selectedDebt}
+      />
+      
+      {/* Settings Modals */}
+      <ProfileModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
+      
+      <CurrencyModal
+        open={currencyModalOpen}
+        onClose={() => setCurrencyModalOpen(false)}
+      />
+      
+      <ReportGeneratorModal
+        open={generateReportModalOpen}
+        onClose={() => setGenerateReportModalOpen(false)}
       />
     </div>
   );
