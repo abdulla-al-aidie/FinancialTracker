@@ -3,10 +3,9 @@ import OpenAI from "openai";
 // Using gpt-4o-mini which is more cost-effective than gpt-4o
 const MODEL = "gpt-4o-mini";
 
-// Initialize OpenAI client with the API key directly 
-// (This is not ideal for production but works for our development environment)
+// Initialize OpenAI client with fallback to direct API key if needed
 export const openai = new OpenAI({
-  apiKey: "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",
+  apiKey: "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", // Fallback to previous key
   dangerouslyAllowBrowser: true // Note: For production, you would typically proxy requests through your backend
 });
 

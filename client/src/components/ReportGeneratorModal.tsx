@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, FileText, Download } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
+import jsPDF from "jspdf";
 
 const reportFormSchema = z.object({
   month: z.date(),
@@ -85,29 +86,106 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
   }
   
   function handleDownload() {
-    // In a real application, this would trigger a download of the actual report
-    const reportData = {
-      date: new Date().toISOString(),
-      income: totalIncome,
-      expenses: totalExpenses,
-      netCashflow,
-      savingsRate
-    };
+    // Generate PDF report using jsPDF
+    const doc = new jsPDF();
+    const reportMonth = format(form.getValues("month"), "MMMM yyyy");
+    const reportType = form.getValues("reportType");
+    const fileName = `finance-report-${format(new Date(), 'MMM-yyyy')}.pdf`;
     
-    // Create a blob with JSON data
-    const blob = new Blob([JSON.stringify(reportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+    // Add title
+    doc.setFontSize(20);
+    doc.setTextColor(0, 0, 128);
+    doc.text("Monthly Financial Report", 105, 20, { align: "center" });
     
-    // Create a download link and trigger the download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finance-report-${format(new Date(), 'MMM-yyyy')}.json`;
-    document.body.appendChild(a);
-    a.click();
+    // Add period
+    doc.setFontSize(14);
+    doc.setTextColor(70, 70, 70);
+    doc.text(`Report Period: ${reportMonth}`, 105, 30, { align: "center" });
+    doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 105, 38, { align: "center" });
     
-    // Clean up
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Add date generated
+    doc.setFontSize(10);
+    doc.setTextColor(120, 120, 120);
+    doc.text(`Generated: ${format(new Date(), "MMMM dd, yyyy")}`, 105, 45, { align: "center" });
+    
+    // Add horizontal line
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 50, 190, 50);
+    
+    // Summary section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Financial Summary", 20, 60);
+    
+    // Summary data in table format
+    doc.setFontSize(12);
+    doc.text("Total Income:", 30, 70);
+    doc.text(`$${totalIncome.toFixed(2)}`, 120, 70);
+    
+    doc.text("Total Expenses:", 30, 78);
+    doc.text(`$${totalExpenses.toFixed(2)}`, 120, 78);
+    
+    doc.text("Net Cashflow:", 30, 86);
+    if (netCashflow >= 0) {
+      doc.setTextColor(0, 128, 0);
+    } else {
+      doc.setTextColor(255, 0, 0);
+    }
+    doc.text(`$${netCashflow.toFixed(2)}`, 120, 86);
+    
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+    doc.text("Savings Rate:", 30, 94);
+    doc.text(`${savingsRate.toFixed(1)}%`, 120, 94);
+    
+    // Add horizontal line
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, 100, 190, 100);
+    
+    // Insights & Recommendations section
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Financial Insights", 20, 110);
+    
+    // Add some insights based on the data
+    doc.setFontSize(12);
+    let y = 120;
+    
+    if (netCashflow >= 0) {
+      doc.text("• Your income is greater than your expenses, which is a positive sign.", 30, y);
+      y += 8;
+      doc.text(`• With a savings rate of ${savingsRate.toFixed(1)}%, you're building financial security.`, 30, y);
+    } else {
+      doc.text("• Your expenses are exceeding your income, which may lead to financial strain.", 30, y);
+      y += 8;
+      doc.text("• Consider reviewing your budget to find areas where you can reduce spending.", 30, y);
+    }
+    
+    y += 16;
+    doc.setFontSize(16);
+    doc.text("Recommendations", 20, y);
+    
+    y += 10;
+    doc.setFontSize(12);
+    if (savingsRate < 20) {
+      doc.text("• Try to increase your savings rate to at least 20% for long-term financial health.", 30, y);
+      y += 8;
+    }
+    
+    if (totalIncome > 0) {
+      doc.text("• Consider setting up an emergency fund with 3-6 months of expenses.", 30, y);
+      y += 8;
+    }
+    
+    doc.text("• Review your spending patterns to identify opportunities for saving.", 30, y);
+    
+    // Footer
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text("Finance Tracker App - Confidential Financial Report", 105, 280, { align: "center" });
+    
+    // Save the PDF
+    doc.save(fileName);
     
     onClose();
   }
