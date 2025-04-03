@@ -34,6 +34,7 @@ import ProfileModal from "@/components/ProfileModal";
 import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
+import MonthSelector from "@/components/MonthSelector";
 
 export default function Dashboard() {
   const { 
@@ -321,6 +322,9 @@ export default function Dashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
+            {/* Month Selector */}
+            <MonthSelector />
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Expense Breakdown Chart */}
               <Card className="col-span-1">
