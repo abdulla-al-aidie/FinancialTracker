@@ -17,10 +17,12 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExpenseCategory, GoalType } from "@/types/finance";
+import { ExpenseCategory, GoalType, Budget, Goal } from "@/types/finance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import BudgetFormModal from "@/components/BudgetFormModal";
+import GoalFormModal from "@/components/GoalFormModal";
 
 export default function Dashboard() {
   const { 
@@ -36,6 +38,14 @@ export default function Dashboard() {
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // State for modal visibility
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  
+  // State for selected budget or goal for editing
+  const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>(undefined);
+  const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
   
   // Format currency
   const formatCurrency = (value: number) => {
@@ -92,6 +102,18 @@ export default function Dashboard() {
     percent: budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0
   })).sort((a, b) => b.percent - a.percent);
 
+  // Handler for budget clicking
+  const handleBudgetClick = (budget: Budget) => {
+    setSelectedBudget(budget);
+    setBudgetModalOpen(true);
+  };
+  
+  // Handler for goal clicking
+  const handleGoalClick = (goal: Goal) => {
+    setSelectedGoal(goal);
+    setGoalModalOpen(true);
+  };
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -367,7 +389,17 @@ export default function Dashboard() {
                 {budgetData.length > 0 ? (
                   <div className="space-y-4">
                     {budgetData.map((budget) => (
-                      <div key={budget.category} className="space-y-1">
+                      <div 
+                        key={budget.category} 
+                        className="space-y-1 hover:bg-gray-50 rounded p-2 cursor-pointer"
+                        onClick={() => {
+                          // Find the original budget object to pass to the form
+                          const originalBudget = budgets.find(b => b.category === budget.category);
+                          if (originalBudget) {
+                            handleBudgetClick(originalBudget);
+                          }
+                        }}
+                      >
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">{budget.category}</span>
                           <span className="text-sm text-gray-500">
@@ -391,7 +423,15 @@ export default function Dashboard() {
                         </div>
                       </div>
                     ))}
-                    <Button className="w-full">Manage Budgets</Button>
+                    <Button 
+                      className="w-full" 
+                      onClick={() => {
+                        setSelectedBudget(undefined);
+                        setBudgetModalOpen(true);
+                      }}
+                    >
+                      Create New Budget
+                    </Button>
                   </div>
                 ) : (
                   <div className="text-center py-10">
@@ -399,7 +439,12 @@ export default function Dashboard() {
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No budgets set</h3>
                     <p className="mt-1 text-sm text-gray-500">Get started by creating your first budget</p>
                     <div className="mt-6">
-                      <Button>Create a Budget</Button>
+                      <Button onClick={() => {
+                        setSelectedBudget(undefined);
+                        setBudgetModalOpen(true);
+                      }}>
+                        Create a Budget
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -418,7 +463,11 @@ export default function Dashboard() {
                 {goals.length > 0 ? (
                   <div className="space-y-5">
                     {goals.map((goal) => (
-                      <div key={goal.id} className="border rounded-lg p-4">
+                      <div 
+                        key={goal.id} 
+                        className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleGoalClick(goal)}
+                      >
                         <div className="flex justify-between items-start">
                           <div>
                             <Badge variant={goal.type === GoalType.Saving ? "outline" : "secondary"}>
@@ -446,7 +495,15 @@ export default function Dashboard() {
                         </div>
                       </div>
                     ))}
-                    <Button className="w-full">Manage Goals</Button>
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedGoal(undefined);
+                        setGoalModalOpen(true);
+                      }}
+                    >
+                      Create New Goal
+                    </Button>
                   </div>
                 ) : (
                   <div className="text-center py-10">
@@ -454,7 +511,12 @@ export default function Dashboard() {
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No goals set</h3>
                     <p className="mt-1 text-sm text-gray-500">Create a goal for saving or paying off debt</p>
                     <div className="mt-6">
-                      <Button>Create a Goal</Button>
+                      <Button onClick={() => {
+                        setSelectedGoal(undefined);
+                        setGoalModalOpen(true);
+                      }}>
+                        Create a Goal
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -539,6 +601,20 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Budget Form Modal */}
+      <BudgetFormModal
+        open={budgetModalOpen}
+        onClose={() => setBudgetModalOpen(false)}
+        budget={selectedBudget}
+      />
+      
+      {/* Goal Form Modal */}
+      <GoalFormModal
+        open={goalModalOpen}
+        onClose={() => setGoalModalOpen(false)}
+        goal={selectedGoal}
+      />
     </div>
   );
 }
