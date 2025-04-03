@@ -13,16 +13,22 @@ import {
   ChevronDown,
   AlertTriangle,
   ShoppingBag,
-  TrendingUp
+  TrendingUp,
+  Landmark,
+  CalendarDays,
+  PlusCircle
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ExpenseCategory, GoalType, Budget, Goal } from "@/types/finance";
+import { ExpenseCategory, GoalType, Budget, Goal, Income, Expense, Debt, IncomeType } from "@/types/finance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import BudgetFormModal from "@/components/BudgetFormModal";
 import GoalFormModal from "@/components/GoalFormModal";
+import IncomeFormModal from "@/components/IncomeFormModal";
+import ExpenseFormModal from "@/components/ExpenseFormModal";
+import DebtFormModal from "@/components/DebtFormModal";
 
 export default function Dashboard() {
   const { 
@@ -30,9 +36,11 @@ export default function Dashboard() {
     totalExpenses, 
     netCashflow,
     savingsRate, 
+    incomes,
     expenses,
     budgets,
     goals,
+    debts,
     recommendations,
     alerts
   } = useFinance();
@@ -42,10 +50,16 @@ export default function Dashboard() {
   // State for modal visibility
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [expenseModalOpen, setExpenseModalOpen] = useState(false);
+  const [debtModalOpen, setDebtModalOpen] = useState(false);
   
-  // State for selected budget or goal for editing
+  // State for selected items for editing
   const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>(undefined);
   const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
+  const [selectedIncome, setSelectedIncome] = useState<Income | undefined>(undefined);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | undefined>(undefined);
+  const [selectedDebt, setSelectedDebt] = useState<Debt | undefined>(undefined);
   
   // Format currency
   const formatCurrency = (value: number) => {
@@ -112,6 +126,24 @@ export default function Dashboard() {
   const handleGoalClick = (goal: Goal) => {
     setSelectedGoal(goal);
     setGoalModalOpen(true);
+  };
+  
+  // Handler for income clicking
+  const handleIncomeClick = (income: Income) => {
+    setSelectedIncome(income);
+    setIncomeModalOpen(true);
+  };
+  
+  // Handler for expense clicking
+  const handleExpenseClick = (expense: Expense) => {
+    setSelectedExpense(expense);
+    setExpenseModalOpen(true);
+  };
+  
+  // Handler for debt clicking
+  const handleDebtClick = (debt: Debt) => {
+    setSelectedDebt(debt);
+    setDebtModalOpen(true);
   };
   
   return (
@@ -231,10 +263,18 @@ export default function Dashboard() {
         
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-4 md:grid-cols-5 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-6 md:grid-cols-7 lg:w-auto">
             <TabsTrigger value="overview" className="flex items-center">
               <BarChart className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="flex items-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Transactions</span>
+            </TabsTrigger>
+            <TabsTrigger value="debts" className="flex items-center">
+              <Landmark className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Debts</span>
             </TabsTrigger>
             <TabsTrigger value="budgets" className="flex items-center">
               <CreditCard className="h-4 w-4 mr-2" />
@@ -372,6 +412,215 @@ export default function Dashboard() {
                     <p className="text-sm text-gray-400 mt-1">
                       Keep adding financial data to receive personalized insights
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          {/* Transactions Tab */}
+          <TabsContent value="transactions" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Income List */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle>Income</CardTitle>
+                    <CardDescription>Track your revenue sources</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1"
+                    onClick={() => {
+                      setSelectedIncome(undefined);
+                      setIncomeModalOpen(true);
+                    }}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span>Add</span>
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {incomes.length > 0 ? (
+                    <div className="space-y-4">
+                      {incomes.map((income) => (
+                        <div 
+                          key={income.id} 
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                          onClick={() => handleIncomeClick(income)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`p-2 rounded-full ${
+                              income.type === IncomeType.Salary ? 'bg-blue-100' :
+                              income.type === IncomeType.Freelance ? 'bg-green-100' :
+                              income.type === IncomeType.Investment ? 'bg-purple-100' :
+                              income.type === IncomeType.Gift ? 'bg-pink-100' : 'bg-gray-100'
+                            }`}>
+                              <DollarSign className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{income.description}</p>
+                              <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(income.amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <DollarSign className="mx-auto h-10 w-10 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No income entries</h3>
+                      <p className="mt-1 text-sm text-gray-500">Get started by adding your income sources.</p>
+                      <div className="mt-6">
+                        <Button
+                          onClick={() => {
+                            setSelectedIncome(undefined);
+                            setIncomeModalOpen(true);
+                          }}
+                        >
+                          Add Income
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              
+              {/* Expenses List */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle>Expenses</CardTitle>
+                    <CardDescription>Track your spending</CardDescription>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1"
+                    onClick={() => {
+                      setSelectedExpense(undefined);
+                      setExpenseModalOpen(true);
+                    }}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span>Add</span>
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {expenses.length > 0 ? (
+                    <div className="space-y-4">
+                      {expenses.map((expense) => (
+                        <div 
+                          key={expense.id} 
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                          onClick={() => handleExpenseClick(expense)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 rounded-full bg-red-100">
+                              <ShoppingBag className="h-4 w-4 text-red-500" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{expense.description}</p>
+                              <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <ShoppingBag className="mx-auto h-10 w-10 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No expense entries</h3>
+                      <p className="mt-1 text-sm text-gray-500">Start tracking your spending habits.</p>
+                      <div className="mt-6">
+                        <Button
+                          onClick={() => {
+                            setSelectedExpense(undefined);
+                            setExpenseModalOpen(true);
+                          }}
+                        >
+                          Add Expense
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          {/* Debts Tab */}
+          <TabsContent value="debts" className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <div>
+                  <CardTitle>Debt Tracker</CardTitle>
+                  <CardDescription>Monitor and manage all your debts</CardDescription>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-8 gap-1"
+                  onClick={() => {
+                    setSelectedDebt(undefined);
+                    setDebtModalOpen(true);
+                  }}
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Add</span>
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {debts.length > 0 ? (
+                  <div className="space-y-4">
+                    {debts.map((debt) => (
+                      <div 
+                        key={debt.id} 
+                        className="border rounded-lg shadow-sm hover:bg-gray-50 cursor-pointer"
+                        onClick={() => handleDebtClick(debt)}
+                      >
+                        <div className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-medium">{debt.name}</h3>
+                              <p className="text-sm text-gray-500">Due: {new Date(debt.dueDate).toLocaleDateString()}</p>
+                            </div>
+                            <Badge variant="outline" className="text-red-500">
+                              {debt.interestRate}% APR
+                            </Badge>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500">Current Balance</p>
+                              <p className="text-sm font-medium">{formatCurrency(debt.balance)}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Minimum Payment</p>
+                              <p className="text-sm font-medium">{formatCurrency(debt.minimumPayment)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <Landmark className="mx-auto h-10 w-10 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No debts</h3>
+                    <p className="mt-1 text-sm text-gray-500">Track your loans, credit cards, and other debts.</p>
+                    <div className="mt-6">
+                      <Button
+                        onClick={() => {
+                          setSelectedDebt(undefined);
+                          setDebtModalOpen(true);
+                        }}
+                      >
+                        Add Debt
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>
@@ -614,6 +863,27 @@ export default function Dashboard() {
         open={goalModalOpen}
         onClose={() => setGoalModalOpen(false)}
         goal={selectedGoal}
+      />
+      
+      {/* Income Form Modal */}
+      <IncomeFormModal
+        open={incomeModalOpen}
+        onClose={() => setIncomeModalOpen(false)}
+        income={selectedIncome}
+      />
+      
+      {/* Expense Form Modal */}
+      <ExpenseFormModal
+        open={expenseModalOpen}
+        onClose={() => setExpenseModalOpen(false)}
+        expense={selectedExpense}
+      />
+      
+      {/* Debt Form Modal */}
+      <DebtFormModal
+        open={debtModalOpen}
+        onClose={() => setDebtModalOpen(false)}
+        debt={selectedDebt}
       />
     </div>
   );
