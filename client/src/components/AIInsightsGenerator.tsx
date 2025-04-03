@@ -28,10 +28,8 @@ export default function AIInsightsGenerator() {
     
     try {
       // Call the generateRecommendations function from the finance context
-      generateRecommendations();
-      
-      // Add a small delay to simulate AI processing
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Since it's now async, we need to properly await it
+      await generateRecommendations();
     } catch (error) {
       console.error("Error generating insights:", error);
       setGenerationError("Failed to generate insights. Please try again later.");

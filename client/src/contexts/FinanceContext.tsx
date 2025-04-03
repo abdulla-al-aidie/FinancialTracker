@@ -1,5 +1,6 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { generateFinancialInsights } from "@/lib/openai";
 import { 
   Income, 
   Expense, 
@@ -81,7 +82,7 @@ interface FinanceContextType {
   
   // Helper functions
   categorizeExpense: (description: string) => ExpenseCategory;
-  generateRecommendations: () => void;
+  generateRecommendations: () => Promise<void>;
   checkBudgetAlerts: () => void;
 }
 
@@ -190,25 +191,74 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setRecommendations(prev => [...prev, ...newRecommendations]);
   };
   
-  // Generate AI recommendations (placeholder for future ML integration)
-  const generateRecommendations = () => {
-    // This would be replaced with actual AI/ML analysis
-    const newRecommendation: Recommendation = {
-      id: Date.now(),
-      type: "Smart Suggestion",
-      description: "Based on your spending patterns, you could save more by reducing entertainment expenses.",
-      impact: "Potential monthly savings: $100",
-      dateGenerated: new Date().toISOString(),
-      isRead: false
-    };
-    
-    setRecommendations(prev => [...prev, newRecommendation]);
-    
-    toast({
-      title: "New recommendation available",
-      description: "We've generated a new financial insight for you.",
-      variant: "default"
-    });
+  // Generate AI recommendations using OpenAI
+  const generateRecommendations = async () => {
+    try {
+      // Prepare data for the OpenAI API
+      const topExpenseCategories = Object.values(ExpenseCategory).map(category => {
+        const categoryExpenses = expenses.filter(exp => exp.category === category);
+        const amount = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        return { category, amount };
+      })
+      .filter(category => category.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+      
+      const overBudgetCategories = budgets
+        .filter(budget => budget.spent > budget.limit)
+        .map(budget => budget.category);
+      
+      const debtTotal = debts.reduce((sum, debt) => sum + debt.balance, 0);
+      const avgInterestRate = debts.length > 0
+        ? debts.reduce((sum, debt) => sum + debt.interestRate, 0) / debts.length
+        : 0;
+      
+      // Call the improved OpenAI function for detailed insights
+      const aiInsights = await generateFinancialInsights({
+        totalIncome,
+        totalExpenses,
+        netCashflow,
+        savingsRate,
+        topExpenseCategories,
+        overBudgetCategories,
+        debtTotal,
+        averageInterestRate: avgInterestRate
+      });
+      
+      // Convert AI insights to recommendations
+      const newRecommendations: Recommendation[] = aiInsights.map((insight: {type: string; description: string; impact: string}) => ({
+        id: Date.now() + Math.random() * 1000,
+        type: insight.type,
+        description: insight.description,
+        impact: insight.impact,
+        dateGenerated: new Date().toISOString(),
+        isRead: false
+      }));
+      
+      // Add the new recommendations
+      if (newRecommendations.length > 0) {
+        setRecommendations(prev => [...prev, ...newRecommendations]);
+        
+        toast({
+          title: `${newRecommendations.length} new recommendations available`,
+          description: "We've generated detailed financial insights based on your data.",
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "Could not generate recommendations",
+          description: "Please add more financial data for better insights.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error generating AI recommendations:", error);
+      toast({
+        title: "Error generating insights",
+        description: "We encountered an issue when analyzing your financial data.",
+        variant: "destructive"
+      });
+    }
   };
   
   // Check for budget alerts

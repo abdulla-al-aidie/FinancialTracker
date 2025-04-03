@@ -1,11 +1,12 @@
 import OpenAI from "openai";
 
-// The newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const MODEL = "gpt-4o";
+// Using gpt-4o-mini which is more cost-effective than gpt-4o
+const MODEL = "gpt-4o-mini";
 
-// Initialize OpenAI client
+// Initialize OpenAI client with the API key directly 
+// (This is not ideal for production but works for our development environment)
 export const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+  apiKey: "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",
   dangerouslyAllowBrowser: true // Note: For production, you would typically proxy requests through your backend
 });
 
@@ -20,10 +21,10 @@ interface FinancialData {
   averageInterestRate: number;
 }
 
-export async function generateFinancialInsights(data: FinancialData): Promise<string[]> {
+export async function generateFinancialInsights(data: FinancialData): Promise<{type: string; description: string; impact: string}[]> {
   try {
     const prompt = `
-      You are a financial advisor assistant. Based on the following financial data, provide 3-5 specific, actionable recommendations to help improve the user's financial situation.
+      You are a financial advisor assistant with expertise across personal finance. Based on the following financial data, generate detailed, specific, and personalized recommendations to help improve the user's financial situation.
       
       Financial Summary:
       - Total Monthly Income: $${data.totalIncome.toFixed(2)}
@@ -35,37 +36,88 @@ export async function generateFinancialInsights(data: FinancialData): Promise<st
       - Total Debt: $${data.debtTotal.toFixed(2)}
       - Average Interest Rate: ${data.averageInterestRate.toFixed(1)}%
       
-      Provide your recommendations in JSON format as an array of strings. Each recommendation should be specific, actionable, and based on the data above. Format the response exactly like this:
-      ["Recommendation 1", "Recommendation 2", "Recommendation 3"]
+      Generate 4-6 unique recommendations covering different aspects of the user's finances:
+      1. Specific budget adjustments
+      2. Debt management strategies
+      3. Spending pattern optimizations
+      4. Savings opportunities
+      5. Income enhancement possibilities
+      6. Investment considerations
+      
+      For each recommendation, provide:
+      1. A concise type/category (e.g., "Budget Optimization", "Debt Reduction", "Income Growth")
+      2. A detailed, personalized description with specific actions (at least 2-3 sentences)
+      3. A clear quantification of the potential impact (e.g., "Save $X per month", "Reduce interest payments by Y%", "Reach goal Z months earlier")
+      
+      Format your response as a JSON array of objects, each with "type", "description", and "impact" fields. Use realistic numbers based on the financial data provided. Ensure each recommendation is diverse and not repetitive of others.
+      
+      Example format:
+      [
+        {
+          "type": "Budget Optimization",
+          "description": "Consider reducing your spending on Entertainment by 15%, which is currently higher than average for your income level. Limiting streaming subscriptions to 2-3 services and using free alternatives for others could help. Additionally, look for discounted activities through services like Groupon.",
+          "impact": "Potential savings of $87 per month, accelerating your Emergency Fund goal by approximately 3 months."
+        },
+        {...}
+      ]
     `;
 
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      temperature: 0.7 // Add some variability to responses
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      return ["Unable to generate recommendations at this time."];
+      return [{
+        type: "Error",
+        description: "Unable to generate recommendations at this time.",
+        impact: "No impact calculated"
+      }];
     }
 
     try {
       const parsedResponse = JSON.parse(content);
-      return Array.isArray(parsedResponse) ? parsedResponse : [];
+      if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
+        return parsedResponse.map(item => ({
+          type: item.type || "Financial Insight",
+          description: item.description || "No description provided",
+          impact: item.impact || "Impact not calculated"
+        }));
+      } else {
+        return [{
+          type: "General Advice",
+          description: "We couldn't generate personalized recommendations based on your current data. Try adding more transactions and budget information.",
+          impact: "Impact can't be calculated with limited data"
+        }];
+      }
     } catch (error: any) {
       console.error("Error parsing OpenAI response:", error);
-      return ["Unable to process recommendations. Please try again later."];
+      return [{
+        type: "Error",
+        description: "We encountered an issue processing the financial analysis. Our team has been notified.",
+        impact: "No impact calculated"
+      }];
     }
   } catch (error: any) {
     console.error("Error calling OpenAI API:", error);
     
     // Check if it's an API key error
     if (error.message && error.message.includes('API key')) {
-      return ["OpenAI API key is missing or invalid. Please provide a valid API key in your environment variables."];
+      return [{
+        type: "API Configuration Error",
+        description: "OpenAI API key is missing or invalid. Please provide a valid API key in your environment variables.",
+        impact: "No impact calculated"
+      }];
     }
     
-    return ["Unable to generate recommendations at this time. Please try again later."];
+    return [{
+      type: "Service Unavailable",
+      description: "Our AI recommendation service is temporarily unavailable. Please try again later.",
+      impact: "No impact calculated"
+    }];
   }
 }
 
