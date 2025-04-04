@@ -1528,16 +1528,29 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Get target month goals or initialize empty array
     const targetGoals = allGoals[targetMonthId] || [];
     
-    // Calculate current total progress for each goal from the source month
+    // Calculate cumulative progress for each goal up to the source month (inclusive)
     const goalProgress: Record<number, number> = {};
+    const allMonthIds = Object.keys(months.reduce((acc, month) => {
+      acc[month.id] = true;
+      return acc;
+    }, {} as Record<string, boolean>)).sort();
+    
+    // Only consider months up to and including the source month
+    const relevantMonthIds = allMonthIds.filter(monthId => monthId <= sourceMonthId);
+    
+    // For each goal in source month, calculate its total progress across all previous months
     sourceGoals.forEach(goal => {
-      // Sum up all monthly progress for this goal
       let totalProgress = 0;
+      
+      // Sum up progress from all relevant months (only those up to source month)
       if (goal.monthlyProgress) {
-        Object.values(goal.monthlyProgress).forEach((amount: number) => {
-          totalProgress += amount;
+        relevantMonthIds.forEach(monthId => {
+          if (goal.monthlyProgress && goal.monthlyProgress[monthId]) {
+            totalProgress += goal.monthlyProgress[monthId];
+          }
         });
       }
+      
       goalProgress[goal.id] = totalProgress;
     });
     
@@ -1546,26 +1559,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // Find matching goal in target month if it exists
       const existingGoal = targetGoals.find(g => g.id === sourceGoal.id);
       
+      // Get total progress up to source month
+      const progressSoFar = goalProgress[sourceGoal.id] || 0;
+      
       if (existingGoal) {
-        // Get total progress for this goal up to source month
-        const progressSoFar = goalProgress[sourceGoal.id] || 0;
-        
-        // Set currentAmount to reflect progress from all months 
-        // including the source month's progress
+        // Important: We're bringing forward metadata and progress from source month,
+        // but preserving any existing target month progress data
         return {
           ...sourceGoal,
-          currentAmount: progressSoFar,
+          targetAmount: sourceGoal.targetAmount,  // Keep target amount from source
+          targetDate: sourceGoal.targetDate,      // Keep target date from source
+          description: sourceGoal.description,    // Keep description from source
+          type: sourceGoal.type,                  // Keep goal type from source
+          priority: sourceGoal.priority,          // Keep priority from source
+          currentAmount: progressSoFar,           // Update cumulative progress
           monthlyProgress: {
-            ...sourceGoal.monthlyProgress,
-            ...existingGoal.monthlyProgress
+            ...sourceGoal.monthlyProgress,        // Bring source monthly progress
+            ...existingGoal.monthlyProgress       // But preserve target month's own progress (if any)
           }
         };
       } else {
         // Goal doesn't exist in target month, copy it with its progress
-        const progressSoFar = goalProgress[sourceGoal.id] || 0;
         return {
           ...sourceGoal,
-          currentAmount: progressSoFar
+          currentAmount: progressSoFar,
+          // We're creating a new goal for the target month, so simply copy the monthly progress data
+          monthlyProgress: { ...sourceGoal.monthlyProgress } 
+          // Note: We're only copying the monthly progress entries, not adding a new one for the target month
         };
       }
     });
@@ -1598,26 +1618,44 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         latestBalance = sourceDebt.monthlyBalances[sourceMonthId];
       }
       
+      // Calculate total payments made up to source month
+      let totalPayments = 0;
+      if (sourceDebt.monthlyPayments) {
+        relevantMonthIds.forEach(monthId => {
+          if (sourceDebt.monthlyPayments && sourceDebt.monthlyPayments[monthId]) {
+            totalPayments += sourceDebt.monthlyPayments[monthId];
+          }
+        });
+      }
+      
       if (existingDebt) {
-        // Preserve the target month's monthly payments and balances
+        // Preserve the target month's existing data while updating metadata from source
         return {
           ...sourceDebt,
-          balance: latestBalance, // Update main balance to latest known value
+          name: sourceDebt.name,                    // Keep name from source
+          balance: latestBalance,                   // Update with latest balance
+          dueDate: sourceDebt.dueDate,              // Keep due date from source
+          interestRate: sourceDebt.interestRate,    // Keep interest rate from source
+          minimumPayment: sourceDebt.minimumPayment,// Keep minimum payment from source
+          priority: sourceDebt.priority,            // Keep priority from source
           monthlyPayments: {
-            ...sourceDebt.monthlyPayments,
-            ...existingDebt.monthlyPayments
+            ...sourceDebt.monthlyPayments,          // Bring source payments
+            ...existingDebt.monthlyPayments         // But preserve target month's own payments (if any)
           },
           monthlyBalances: {
-            ...sourceDebt.monthlyBalances,
-            ...existingDebt.monthlyBalances
+            ...sourceDebt.monthlyBalances,          // Bring source balances
+            ...existingDebt.monthlyBalances         // But preserve target month's own balances (if any)
           }
         };
       } else {
-        // Debt doesn't exist in target month, copy it with its payments/balances
-        // and update the balance to latest value
+        // Debt doesn't exist in target month, copy it with current balance
         return {
           ...sourceDebt,
-          balance: latestBalance
+          balance: latestBalance,
+          // We're creating a new debt for the target month, so copy the monthly payment/balance data
+          monthlyPayments: { ...sourceDebt.monthlyPayments },
+          monthlyBalances: { ...sourceDebt.monthlyBalances }
+          // Note: We're only copying the entries, not adding new ones for target month
         };
       }
     });
