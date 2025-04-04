@@ -1014,27 +1014,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scenariosCount: scenarios?.length
       });
       
-      // First, handle user profile creation or update
-      let savedUserProfile;
-      if (userProfile) {
-        if (userProfile.id) {
-          // Update existing profile
-          savedUserProfile = await storage.updateUserProfile(
-            userProfile.id,
-            userProfile
-          );
-        } else {
-          // Create new profile
-          savedUserProfile = await storage.createUserProfile({
-            userId: 1, // Default user ID
-            name: userProfile.name || "Default User",
-            email: userProfile.email || "user@example.com",
-            currency: userProfile.currency || "USD",
-            language: userProfile.language || "en",
-            theme: userProfile.theme || "light",
-            createdAt: new Date()
+      // First, make sure a default user exists
+      try {
+        // Check if default user exists, if not create it
+        let defaultUser = await storage.getUser(1);
+        if (!defaultUser) {
+          defaultUser = await storage.createUser({
+            username: "default",
+            password: "defaultpassword"
           });
         }
+        
+        // Now handle user profile creation or update
+        let savedUserProfile;
+        if (userProfile) {
+          const existingProfile = await storage.getUserProfile(defaultUser.id);
+          
+          if (existingProfile) {
+            // Update existing profile
+            savedUserProfile = await storage.updateUserProfile(
+              defaultUser.id,
+              {
+                ...userProfile,
+                userId: defaultUser.id
+              }
+            );
+          } else {
+            // Create new profile
+            savedUserProfile = await storage.createUserProfile({
+              userId: defaultUser.id,
+              name: userProfile?.name || "Default User",
+              email: userProfile?.email || "user@example.com",
+              currency: userProfile?.currency || "USD",
+              notificationPreferences: {}
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error setting up user:", error);
+        // Continue with other operations even if user setup fails
       }
       
       // Process and save months
