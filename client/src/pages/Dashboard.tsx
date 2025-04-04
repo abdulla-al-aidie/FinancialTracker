@@ -473,48 +473,7 @@ export default function Dashboard() {
               </Card>
             </div>
             
-            {/* Recommendations Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Personalized Recommendations</CardTitle>
-                <CardDescription>AI-generated insights to improve your finances</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {sortedRecommendations.length > 0 ? (
-                  <div className="space-y-4">
-                    {sortedRecommendations.slice(0, 3).map((rec) => (
-                      <div 
-                        key={rec.id} 
-                        className={`p-4 rounded-lg border ${
-                          rec.isRead ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-medium text-sm">{rec.type}</h3>
-                          {!rec.isRead && (
-                            <Badge variant="secondary" className="text-xs">New</Badge>
-                          )}
-                        </div>
-                        <p className="mt-1 text-sm text-gray-600">{rec.description}</p>
-                        <p className="mt-2 text-xs font-medium text-primary">{rec.impact}</p>
-                      </div>
-                    ))}
-                    {sortedRecommendations.length > 3 && (
-                      <Button variant="ghost" className="w-full text-sm">
-                        Show {sortedRecommendations.length - 3} more recommendations
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No recommendations available yet</p>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Keep adding financial data to receive personalized insights
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+
           </TabsContent>
           
           {/* Transactions Tab */}
@@ -987,14 +946,11 @@ export default function Dashboard() {
           
           {/* Insights Tab */}
           <TabsContent value="insights" className="space-y-4">
-            {/* New Financial Health Assessment component */}
+            {/* Financial Health Assessment component */}
             <FinancialHealthAssessment />
             
             {/* AI Spending Optimization component */}
             <AISpendingOptimization />
-            
-            {/* New Actionable Recommendations component */}
-            <ActionableRecommendations />
           </TabsContent>
           
           {/* Knowledge Hub Tab */}
