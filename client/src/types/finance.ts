@@ -91,6 +91,7 @@ export interface Debt {
   minimumPayment: number;
   dueDate: string;
   priority?: number; // Higher number means higher priority
+  monthlyPayments: Record<string, number>; // Monthly payments by month ID (YYYY-MM)
 }
 
 // AI Recommendation

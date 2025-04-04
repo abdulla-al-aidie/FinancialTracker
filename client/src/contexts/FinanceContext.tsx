@@ -799,6 +799,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
   
   const updateDebt = (debt: Debt) => {
+    // Get the existing debt to compare changes
+    const existingDebt = debts.find(d => d.id === debt.id);
+    
+    // Only process if we found the existing debt
+    if (existingDebt) {
+      // Check if payments were deleted (comparing totalPaid)
+      if (debt.totalPaid < existingDebt.totalPaid) {
+        // Reset monthly payments since we can't know which months were affected
+        debt.monthlyPayments = {};
+      }
+      
+      // If the debt's total paid changed but monthly payments are missing, initialize them
+      if (!debt.monthlyPayments) {
+        debt.monthlyPayments = {};
+      }
+    }
+    
+    // Update the debt in state
     const updatedDebts = debts.map(d => d.id === debt.id ? debt : d);
     setDebts(updatedDebts);
     localStorage.setItem("debts", JSON.stringify(updatedDebts));

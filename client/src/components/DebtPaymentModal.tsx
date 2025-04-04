@@ -52,12 +52,24 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
   function onSubmit(values: PaymentFormValues) {
     const paymentAmount = values.amount;
     const paymentDate = format(values.date, "yyyy-MM-dd");
+    // Extract month ID (YYYY-MM) from payment date
+    const paymentMonthId = paymentDate.substring(0, 7);
+    
+    // Initialize monthlyPayments if it doesn't exist
+    const currentMonthlyPayments = debt.monthlyPayments || {};
+    
+    // Add payment to the monthly payment record
+    const updatedMonthlyPayments = {
+      ...currentMonthlyPayments,
+      [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + paymentAmount
+    };
     
     // Update the debt balance and track payment
     const updatedDebt = {
       ...debt,
       balance: Math.max(0, debt.balance - paymentAmount),
-      totalPaid: debt.totalPaid + paymentAmount
+      totalPaid: debt.totalPaid + paymentAmount,
+      monthlyPayments: updatedMonthlyPayments
     };
     
     // Update the debt
