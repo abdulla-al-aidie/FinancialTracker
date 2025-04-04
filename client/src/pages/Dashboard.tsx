@@ -668,12 +668,38 @@ export default function Dashboard() {
                             <div>
                               <h3 className="font-medium">{debt.name}</h3>
                               <p className="text-sm text-gray-500">Due: {new Date(debt.dueDate).toLocaleDateString()}</p>
+                              {debt.priority !== undefined && (
+                                <Badge variant="secondary" className="mt-1">
+                                  Priority: {debt.priority}/10
+                                </Badge>
+                              )}
                             </div>
                             <Badge variant="outline" className="text-red-500">
                               {debt.interestRate}% APR
                             </Badge>
                           </div>
-                          <div className="mt-4 grid grid-cols-2 gap-4">
+                          
+                          {/* New progress bar for debt tracking */}
+                          <div className="mt-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="text-xs text-gray-500">Repayment Progress</span>
+                              {/* Assuming the debt had a starting principal that's not tracked, 
+                                  for now we'll show just the portion of minimum payments made against current balance */}
+                              <span className="text-xs font-medium">
+                                {debt.minimumPayment > 0 
+                                  ? Math.min(100, Math.round((debt.minimumPayment / debt.balance) * 100))
+                                  : 0}%
+                              </span>
+                            </div>
+                            <Progress 
+                              value={debt.minimumPayment > 0 
+                                ? Math.min(100, Math.round((debt.minimumPayment / debt.balance) * 100))
+                                : 0} 
+                              className="h-1.5" 
+                            />
+                          </div>
+                          
+                          <div className="mt-3 grid grid-cols-2 gap-4">
                             <div>
                               <p className="text-xs text-gray-500">Current Balance</p>
                               <p className="text-sm font-medium">{formatCurrency(debt.balance)}</p>
