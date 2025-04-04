@@ -998,6 +998,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Save updated months to localStorage
     localStorage.setItem("months", JSON.stringify(updatedMonths));
     
+    // Check if we need to ensure debt and goal data exists for this month
+    const sortedMonths = [...months.map(m => m.id)].sort();
+    if (sortedMonths.length > 0) {
+      // Find most recent previous month
+      const previousMonths = sortedMonths.filter(m => m < monthId);
+      const mostRecentMonth = previousMonths.length > 0 ? previousMonths[previousMonths.length - 1] : null;
+      
+      // If there's a previous month and this month doesn't have goals/debts, propagate them forward
+      if (mostRecentMonth) {
+        // Check if we need to copy goal/debt data
+        const goalsExist = allGoals[monthId] && allGoals[monthId].length > 0;
+        const debtsExist = allDebts[monthId] && allDebts[monthId].length > 0;
+        
+        if (!goalsExist || !debtsExist) {
+          propagateMonthData(mostRecentMonth, monthId);
+        }
+      }
+    }
+    
     toast({
       title: "Month Changed",
       description: `You are now viewing data for ${getMonthName(monthId)}`,
@@ -1509,15 +1528,33 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Get target month goals or initialize empty array
     const targetGoals = allGoals[targetMonthId] || [];
     
+    // Calculate current total progress for each goal from the source month
+    const goalProgress = {};
+    sourceGoals.forEach(goal => {
+      // Sum up all monthly progress for this goal
+      let totalProgress = 0;
+      if (goal.monthlyProgress) {
+        Object.values(goal.monthlyProgress).forEach((amount: number) => {
+          totalProgress += amount;
+        });
+      }
+      goalProgress[goal.id] = totalProgress;
+    });
+    
     // For each goal in source month, update or create in target month
     const updatedTargetGoals = sourceGoals.map(sourceGoal => {
       // Find matching goal in target month if it exists
       const existingGoal = targetGoals.find(g => g.id === sourceGoal.id);
       
       if (existingGoal) {
-        // Preserve the target month's monthly progress data
+        // Get total progress for this goal up to source month
+        const progressSoFar = goalProgress[sourceGoal.id] || 0;
+        
+        // Set currentAmount to reflect progress from all months 
+        // including the source month's progress
         return {
           ...sourceGoal,
+          currentAmount: progressSoFar,
           monthlyProgress: {
             ...sourceGoal.monthlyProgress,
             ...existingGoal.monthlyProgress
@@ -1525,7 +1562,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         };
       } else {
         // Goal doesn't exist in target month, copy it with its progress
-        return sourceGoal;
+        const progressSoFar = goalProgress[sourceGoal.id] || 0;
+        return {
+          ...sourceGoal,
+          currentAmount: progressSoFar
+        };
       }
     });
     
@@ -1549,10 +1590,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // Find matching debt in target month if it exists
       const existingDebt = targetDebts.find(d => d.id === sourceDebt.id);
       
+      // Get the latest balance from source month - this will be our starting point
+      let latestBalance = sourceDebt.balance;
+      
+      // If source month has a specific balance, use that instead
+      if (sourceDebt.monthlyBalances && sourceDebt.monthlyBalances[sourceMonthId]) {
+        latestBalance = sourceDebt.monthlyBalances[sourceMonthId];
+      }
+      
       if (existingDebt) {
         // Preserve the target month's monthly payments and balances
         return {
           ...sourceDebt,
+          balance: latestBalance, // Update main balance to latest known value
           monthlyPayments: {
             ...sourceDebt.monthlyPayments,
             ...existingDebt.monthlyPayments
@@ -1564,7 +1614,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         };
       } else {
         // Debt doesn't exist in target month, copy it with its payments/balances
-        return sourceDebt;
+        // and update the balance to latest value
+        return {
+          ...sourceDebt,
+          balance: latestBalance
+        };
       }
     });
     
