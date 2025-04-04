@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Expense, ExpenseCategory } from "@/types/finance";
+import { Expense, ExpenseCategory, Debt } from "@/types/finance";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -21,6 +21,7 @@ const expenseFormSchema = z.object({
   date: z.date(),
   category: z.nativeEnum(ExpenseCategory),
   description: z.string().optional(),
+  associatedDebtId: z.number().optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -32,7 +33,7 @@ interface ExpenseFormModalProps {
 }
 
 export default function ExpenseFormModal({ open, onClose, expense }: ExpenseFormModalProps) {
-  const { addExpense, updateExpense, categorizeExpense } = useFinance();
+  const { addExpense, updateExpense, categorizeExpense, debts, updateDebt } = useFinance();
   const isEditMode = !!expense;
   
   // Set up form with default values
@@ -44,17 +45,20 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           date: new Date(expense.date),
           category: expense.category,
           description: expense.description,
+          associatedDebtId: (expense as any).associatedDebtId,
         }
       : {
           amount: 0,
           date: new Date(),
           category: ExpenseCategory.Miscellaneous,
           description: "",
+          associatedDebtId: undefined,
         },
   });
   
   // Auto-categorize when description changes if we're not in edit mode
   const watchDescription = form.watch("description");
+  const watchCategory = form.watch("category");
   
   useEffect(() => {
     if (!isEditMode && watchDescription && watchDescription.length > 3) {
@@ -70,8 +74,34 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
       amount: values.amount,
       category: values.category,
       // Only include description if it's not empty
-      ...(values.description ? { description: values.description } : {})
+      ...(values.description ? { description: values.description } : {}),
+      // Include associatedDebtId if it's a debt payment
+      ...(values.category === ExpenseCategory.DebtPayments && values.associatedDebtId 
+          ? { associatedDebtId: values.associatedDebtId } 
+          : {})
     };
+
+    // If this is a debt payment and we have a debtId, update the debt balance
+    if (values.category === ExpenseCategory.DebtPayments && values.associatedDebtId) {
+      // Find the debt
+      const debtToUpdate = debts.find(debt => debt.id === values.associatedDebtId);
+      
+      if (debtToUpdate) {
+        // Create an automatic description if none was provided
+        if (!expenseData.description) {
+          expenseData.description = `Payment towards ${debtToUpdate.name}`;
+        }
+        
+        // Update the debt with reduced balance
+        const updatedDebt = {
+          ...debtToUpdate,
+          balance: Math.max(0, debtToUpdate.balance - values.amount)
+        };
+        
+        // Update the debt
+        updateDebt(updatedDebt);
+      }
+    }
 
     if (isEditMode && expense) {
       updateExpense({
@@ -198,6 +228,37 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
                 </FormItem>
               )}
             />
+            
+            {/* Associated Debt field - Only show when Debt Payments is selected */}
+            {watchCategory === ExpenseCategory.DebtPayments && debts.length > 0 && (
+              <FormField
+                control={form.control}
+                name="associatedDebtId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Which Debt?</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                      value={field.value?.toString() || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a debt to pay" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {debts.map((debt) => (
+                          <SelectItem key={debt.id} value={debt.id.toString()}>
+                            {debt.name} (${debt.balance.toFixed(2)})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
