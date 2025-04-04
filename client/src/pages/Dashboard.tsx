@@ -18,7 +18,9 @@ import {
   CalendarDays,
   PlusCircle,
   FileText,
-  Trash2
+  Trash2,
+  Mail,
+  Bell
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -51,6 +53,8 @@ import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import MonthSelector from "@/components/MonthSelector";
+import EmailSettingsModal from "@/components/EmailSettingsModal";
+import AlertPreferencesModal from "@/components/AlertPreferencesModal";
 
 export default function Dashboard() {
   const { 
@@ -82,6 +86,8 @@ export default function Dashboard() {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [generateReportModalOpen, setGenerateReportModalOpen] = useState(false);
+  const [emailSettingsModalOpen, setEmailSettingsModalOpen] = useState(false);
+  const [alertPreferencesModalOpen, setAlertPreferencesModalOpen] = useState(false);
   
   // State for selected items for editing
   const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>(undefined);
@@ -953,8 +959,20 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Notifications</h3>
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="outline" className="w-full">Email Settings</Button>
-                      <Button variant="outline" className="w-full">Alert Preferences</Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setEmailSettingsModalOpen(true)}
+                      >
+                        Email Settings
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => setAlertPreferencesModalOpen(true)}
+                      >
+                        Alert Preferences
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1022,6 +1040,17 @@ export default function Dashboard() {
       <ReportGeneratorModal
         open={generateReportModalOpen}
         onClose={() => setGenerateReportModalOpen(false)}
+      />
+      
+      {/* Email and Alert Settings Modals */}
+      <EmailSettingsModal
+        open={emailSettingsModalOpen}
+        onClose={() => setEmailSettingsModalOpen(false)}
+      />
+      
+      <AlertPreferencesModal
+        open={alertPreferencesModalOpen}
+        onClose={() => setAlertPreferencesModalOpen(false)}
       />
     </div>
   );

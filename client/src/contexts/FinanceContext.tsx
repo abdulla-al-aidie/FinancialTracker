@@ -22,7 +22,19 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   email: "",
   preferredCurrency: "USD",
   goalPreference: GoalType.Saving,
-  notificationsEnabled: true
+  notificationsEnabled: true,
+  emailNotifications: {
+    budgetAlerts: true,
+    paymentReminders: true,
+    goalProgress: true,
+    monthlyReports: false
+  },
+  alertPreferences: {
+    budgetWarningThreshold: 80, // Alert at 80% of budget
+    lowBalanceThreshold: 100, // Alert when balance falls below $100
+    upcomingPaymentDays: 3, // Alert 3 days before payment due
+    instantAlerts: true // Show alerts immediately
+  }
 };
 
 // Finance context type definition

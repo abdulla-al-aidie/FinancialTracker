@@ -117,6 +117,18 @@ export interface UserProfile {
   preferredCurrency: string;
   goalPreference: GoalType;
   notificationsEnabled: boolean;
+  emailNotifications: {
+    budgetAlerts: boolean;
+    paymentReminders: boolean;
+    goalProgress: boolean;
+    monthlyReports: boolean;
+  };
+  alertPreferences: {
+    budgetWarningThreshold: number; // Percentage (e.g., 80 means alert at 80% of budget)
+    lowBalanceThreshold: number; // Dollar amount
+    upcomingPaymentDays: number; // Days before due date to notify
+    instantAlerts: boolean; // Whether to show alerts immediately
+  };
 }
 
 // Month data for tracking finances by month
