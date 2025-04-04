@@ -374,13 +374,7 @@ export default function Dashboard() {
                             cx="50%"
                             cy="50%"
                             labelLine={true}
-                            label={({ name, percent }) => {
-                              // Truncate long category names
-                              const shortenedName = name.length > 12 
-                                ? `${name.substring(0, 10)}...` 
-                                : name;
-                              return `${shortenedName}: ${(percent * 100).toFixed(0)}%`;
-                            }}
+                            label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
                             outerRadius={70}
                             fill="#8884d8"
                             dataKey="value"
