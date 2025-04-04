@@ -1014,8 +1014,163 @@ export async function registerRoutes(app: Express): Promise<Server> {
         scenariosCount: scenarios?.length
       });
       
-      // Example database operations - in a full implementation, these would save to storage
-      // In this simple version, we'll just acknowledge receipt
+      // First, handle user profile creation or update
+      let savedUserProfile;
+      if (userProfile) {
+        if (userProfile.id) {
+          // Update existing profile
+          savedUserProfile = await storage.updateUserProfile(
+            userProfile.id,
+            userProfile
+          );
+        } else {
+          // Create new profile
+          savedUserProfile = await storage.createUserProfile({
+            userId: 1, // Default user ID
+            name: userProfile.name || "Default User",
+            email: userProfile.email || "user@example.com",
+            currency: userProfile.currency || "USD",
+            language: userProfile.language || "en",
+            theme: userProfile.theme || "light",
+            createdAt: new Date()
+          });
+        }
+      }
+      
+      // Process and save months
+      if (months && months.length > 0) {
+        for (const month of months) {
+          // Check if month already exists
+          const existingMonth = await storage.getMonth(1, month.id);
+          if (!existingMonth) {
+            // Create new month
+            await storage.createMonth({
+              id: month.id,
+              name: month.name,
+              userId: 1,
+              isActive: month.id === activeMonth
+            });
+          }
+        }
+        
+        // Set active month
+        if (activeMonth) {
+          await storage.setActiveMonth(1, activeMonth);
+        }
+      }
+      
+      // Process financial data for active month only
+      if (activeMonth) {
+        // Save incomes for active month
+        if (incomes && incomes.length > 0) {
+          for (const income of incomes) {
+            if (income.id && income.id > 0) {
+              // Update existing income
+              await storage.updateIncome(income.id, {
+                ...income,
+                userId: 1,
+                monthId: activeMonth
+              });
+            } else {
+              // Create new income
+              await storage.createIncome({
+                ...income,
+                userId: 1,
+                monthId: activeMonth,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+        
+        // Save expenses for active month
+        if (expenses && expenses.length > 0) {
+          for (const expense of expenses) {
+            if (expense.id && expense.id > 0) {
+              // Update existing expense
+              await storage.updateExpense(expense.id, {
+                ...expense,
+                userId: 1,
+                monthId: activeMonth
+              });
+            } else {
+              // Create new expense
+              await storage.createExpense({
+                ...expense,
+                userId: 1,
+                monthId: activeMonth,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+        
+        // Save budgets for active month
+        if (budgets && budgets.length > 0) {
+          for (const budget of budgets) {
+            if (budget.id && budget.id > 0) {
+              // Update existing budget
+              await storage.updateBudget(budget.id, {
+                ...budget,
+                userId: 1,
+                monthId: activeMonth
+              });
+            } else {
+              // Create new budget
+              await storage.createBudget({
+                ...budget,
+                userId: 1,
+                monthId: activeMonth,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+        
+        // Save goals for active month
+        if (goals && goals.length > 0) {
+          for (const goal of goals) {
+            if (goal.id && goal.id > 0) {
+              // Update existing goal
+              await storage.updateGoal(goal.id, {
+                ...goal,
+                userId: 1,
+                monthId: activeMonth
+              });
+            } else {
+              // Create new goal
+              await storage.createGoal({
+                ...goal,
+                userId: 1,
+                monthId: activeMonth,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+        
+        // Save debts for active month
+        if (debts && debts.length > 0) {
+          for (const debt of debts) {
+            if (debt.id && debt.id > 0) {
+              // Update existing debt
+              await storage.updateDebt(debt.id, {
+                ...debt,
+                userId: 1,
+                monthId: activeMonth
+              });
+            } else {
+              // Create new debt
+              await storage.createDebt({
+                ...debt,
+                userId: 1,
+                monthId: activeMonth,
+                createdAt: new Date()
+              });
+            }
+          }
+        }
+      }
       
       // Return success response
       res.json({ 
