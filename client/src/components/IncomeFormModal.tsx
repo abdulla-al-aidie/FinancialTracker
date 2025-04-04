@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,20 +49,25 @@ export default function IncomeFormModal({ open, onClose, income }: IncomeFormMod
   // Set up form with default values
   const form = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeFormSchema),
-    defaultValues: isEditMode
-      ? {
-          amount: income.amount,
-          date: new Date(income.date),
-          type: income.type,
-          description: income.description,
-        }
-      : {
-          amount: 0,
-          date: new Date(),
-          type: IncomeType.Salary,
-          description: "",
-        },
+    defaultValues: {
+      amount: 0,
+      date: new Date(),
+      type: IncomeType.Salary,
+      description: "",
+    }
   });
+  
+  // Set form values when in edit mode or when income changes
+  useEffect(() => {
+    if (income && open) {
+      form.reset({
+        amount: income.amount,
+        date: new Date(income.date),
+        type: income.type,
+        description: income.description || "",
+      });
+    }
+  }, [form, income, open]);
   
   function onSubmit(values: IncomeFormValues) {
     // Create income data with required fields

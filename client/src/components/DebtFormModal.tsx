@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -50,33 +50,41 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
   // State for priority slider
-  const [priority, setPriority] = useState<number>(
-    isEditMode && debt && debt.priority !== undefined ? debt.priority : 5
-  );
+  const [priority, setPriority] = useState<number>(5);
 
   // Set up form with default values
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtFormSchema),
-    defaultValues: isEditMode
-      ? {
-          name: debt.name,
-          balance: debt.balance,
-          originalPrincipal: debt.originalPrincipal,
-          interestRate: debt.interestRate,
-          minimumPayment: debt.minimumPayment,
-          dueDate: new Date(debt.dueDate),
-          priority: debt.priority,
-        }
-      : {
-          name: "",
-          balance: 0,
-          originalPrincipal: 0,
-          interestRate: 0,
-          minimumPayment: 0,
-          dueDate: new Date(),
-          priority: 5,
-        },
+    defaultValues: {
+      name: "",
+      balance: 0,
+      originalPrincipal: 0,
+      interestRate: 0,
+      minimumPayment: 0,
+      dueDate: new Date(),
+      priority: 5,
+    }
   });
+  
+  // Set form values and priority when in edit mode or when debt changes
+  useEffect(() => {
+    if (debt && open) {
+      form.reset({
+        name: debt.name,
+        balance: debt.balance,
+        originalPrincipal: debt.originalPrincipal,
+        interestRate: debt.interestRate,
+        minimumPayment: debt.minimumPayment,
+        dueDate: new Date(debt.dueDate),
+        priority: debt.priority,
+      });
+      
+      // Update priority slider
+      if (debt.priority !== undefined) {
+        setPriority(debt.priority);
+      }
+    }
+  }, [form, debt, open]);
   
   function onSubmit(values: DebtFormValues) {
     // Create debt data with required fields

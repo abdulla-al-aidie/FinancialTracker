@@ -53,20 +53,30 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isEditMode = !!goal;
   
-  // Default values for the form
-  const defaultValues: Partial<GoalFormValues> = {
-    name: goal?.name || "",
-    type: goal?.type || undefined,
-    targetAmount: goal?.targetAmount || undefined,
-    targetDate: goal?.targetDate ? new Date(goal.targetDate) : undefined,
-    description: goal?.description || "",
-  };
-
   // Form setup
   const form = useForm<GoalFormValues>({
     resolver: zodResolver(goalFormSchema),
-    defaultValues,
+    defaultValues: {
+      name: "",
+      type: undefined,
+      targetAmount: undefined,
+      targetDate: undefined,
+      description: "",
+    }
   });
+  
+  // Set form values when in edit mode or when goal changes
+  useEffect(() => {
+    if (goal && open) {
+      form.reset({
+        name: goal.name,
+        type: goal.type,
+        targetAmount: goal.targetAmount,
+        targetDate: goal.targetDate ? new Date(goal.targetDate) : new Date(),
+        description: goal.description,
+      });
+    }
+  }, [form, goal, open]);
 
   function onSubmit(values: GoalFormValues) {
     const formattedDate = format(values.targetDate, "yyyy-MM-dd");
@@ -87,6 +97,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         targetAmount: values.targetAmount,
         targetDate: formattedDate,
         description: values.description || "",
+        priority: 5, // Default medium priority
       });
     }
     
@@ -137,7 +148,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
                     <FormLabel>Goal Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
