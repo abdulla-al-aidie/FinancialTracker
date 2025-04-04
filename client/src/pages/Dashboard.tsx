@@ -695,17 +695,32 @@ export default function Dashboard() {
                           <div className="mt-3">
                             <div className="flex justify-between items-center mb-1">
                               <span className="text-xs text-gray-500">Repayment Progress</span>
-                              {/* Show percentage based on overall progress (total paid vs original principal) */}
+                              {/* Calculate percentage based on monthly payments data */}
                               <span className="text-xs font-medium">
-                                {debt.originalPrincipal > 0 
-                                  ? Math.min(100, Math.round((debt.totalPaid / debt.originalPrincipal) * 100)) 
-                                  : 0}%
+                                {(() => {
+                                  // Get all monthly payments and sum them
+                                  const monthlyPayments = debt.monthlyPayments || {};
+                                  const totalPaid = Object.values(monthlyPayments).reduce(
+                                    (sum, amount) => sum + amount, 0
+                                  );
+                                  // Calculate progress percentage
+                                  return debt.originalPrincipal > 0 
+                                    ? Math.min(100, Math.round((totalPaid / debt.originalPrincipal) * 100)) 
+                                    : 0;
+                                })()}%
                               </span>
                             </div>
                             <Progress 
-                              value={debt.originalPrincipal > 0 
-                                ? Math.min(100, Math.round((debt.totalPaid / debt.originalPrincipal) * 100))
-                                : 0} 
+                              value={(() => {
+                                // Calculate progress percentage for the progress bar
+                                const monthlyPayments = debt.monthlyPayments || {};
+                                const totalPaid = Object.values(monthlyPayments).reduce(
+                                  (sum, amount) => sum + amount, 0
+                                );
+                                return debt.originalPrincipal > 0 
+                                  ? Math.min(100, Math.round((totalPaid / debt.originalPrincipal) * 100))
+                                  : 0;
+                              })()} 
                               className="h-1.5" 
                             />
                             
@@ -721,12 +736,22 @@ export default function Dashboard() {
                             <div>
                               <p className="text-xs text-gray-500">Current Balance</p>
                               <p className="text-sm font-medium">
-                                {formatCurrency(
-                                  // Use month-specific balance if available, otherwise use overall balance
-                                  debt.monthlyBalances && debt.monthlyBalances[activeMonth] !== undefined 
-                                    ? debt.monthlyBalances[activeMonth] 
-                                    : debt.balance
-                                )}
+                                {formatCurrency((() => {
+                                  // Get the month-specific balance if available
+                                  if (debt.monthlyBalances && debt.monthlyBalances[activeMonth] !== undefined) {
+                                    return debt.monthlyBalances[activeMonth];
+                                  }
+                                  
+                                  // If no month-specific balance, calculate it from monthly payments
+                                  const monthlyPayments = debt.monthlyPayments || {};
+                                  // Sum all payments to get total paid
+                                  const totalPaid = Object.values(monthlyPayments).reduce(
+                                    (sum, amount) => sum + amount, 0
+                                  );
+                                  
+                                  // Return original balance minus total payments
+                                  return Math.max(0, debt.originalPrincipal - totalPaid);
+                                })())}
                               </p>
                             </div>
                             <div>
@@ -810,9 +835,21 @@ export default function Dashboard() {
                             </div>
                             <div className="text-right">
                               <p className="text-sm text-gray-500">Target: {formatCurrency(goal.targetAmount)}</p>
-                              <p className="text-sm font-medium">
-                                {formatCurrency(goal.currentAmount)} total saved
-                              </p>
+                              
+                              {/* Calculate total progress from monthly data */}
+                              {(() => {
+                                // Get all monthly progress values and sum them
+                                const monthlyProgress = goal.monthlyProgress || {};
+                                const totalProgress = Object.values(monthlyProgress).reduce(
+                                  (sum, amount) => sum + amount, 0
+                                );
+                                return (
+                                  <p className="text-sm font-medium">
+                                    {formatCurrency(totalProgress)} total saved
+                                  </p>
+                                );
+                              })()}
+                              
                               {/* Show month-specific progress if available */}
                               {goal.monthlyProgress && goal.monthlyProgress[activeMonth] !== undefined && (
                                 <p className="text-xs text-gray-500 mt-1">
@@ -824,9 +861,28 @@ export default function Dashboard() {
                           <div className="mt-3">
                             <div className="flex justify-between text-xs mb-1">
                               <span>Overall Progress</span>
-                              <span>{((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%</span>
+                              <span>
+                                {(() => {
+                                  // Calculate percentage from monthly data
+                                  const monthlyProgress = goal.monthlyProgress || {};
+                                  const totalProgress = Object.values(monthlyProgress).reduce(
+                                    (sum, amount) => sum + amount, 0
+                                  );
+                                  return ((totalProgress / goal.targetAmount) * 100).toFixed(1);
+                                })()}%
+                              </span>
                             </div>
-                            <Progress value={(goal.currentAmount / goal.targetAmount) * 100} className="h-2" />
+                            <Progress 
+                              value={(() => {
+                                // Calculate percentage for progress bar
+                                const monthlyProgress = goal.monthlyProgress || {};
+                                const totalProgress = Object.values(monthlyProgress).reduce(
+                                  (sum, amount) => sum + amount, 0
+                                );
+                                return (totalProgress / goal.targetAmount) * 100;
+                              })()} 
+                              className="h-2" 
+                            />
                           </div>
                           <div className="mt-3 text-xs text-gray-500 text-right">
                             Target date: {new Date(goal.targetDate).toLocaleDateString()}

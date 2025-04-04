@@ -32,7 +32,7 @@ interface DebtPaymentModalProps {
 }
 
 export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentModalProps) {
-  const { updateDebt, goals, updateGoal, addExpense } = useFinance();
+  const { updateDebt, goals, updateGoal, addExpense, activeMonth } = useFinance();
   
   // Find related debt payoff goal if any
   const relatedGoal = goals.find(
@@ -67,20 +67,42 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Initialize monthly balances if it doesn't exist
     const currentMonthlyBalances = debt.monthlyBalances || {};
     
-    // Calculate new balance
-    const newBalance = Math.max(0, debt.balance - paymentAmount);
+    // Get the current month's starting balance or use the overall balance as fallback
+    // For the selected payment month
+    let startingBalanceForMonth = debt.balance;
+    
+    // Look for the previous month's balance as starting point
+    const monthParts = paymentMonthId.split('-');
+    let prevYear = parseInt(monthParts[0]);
+    let prevMonth = parseInt(monthParts[1]) - 1;
+    
+    if (prevMonth === 0) {
+      prevMonth = 12;
+      prevYear -= 1;
+    }
+    
+    const prevMonthId = `${prevYear}-${prevMonth.toString().padStart(2, '0')}`;
+    
+    // If we have a balance for the previous month, use that as our starting point
+    if (currentMonthlyBalances[prevMonthId] !== undefined) {
+      startingBalanceForMonth = currentMonthlyBalances[prevMonthId];
+    }
+    
+    // Calculate new month-specific balance
+    // Starting balance minus the current month's payments (including this one)
+    const newMonthBalance = Math.max(0, startingBalanceForMonth - 
+      (currentMonthlyPayments[paymentMonthId] || 0) - paymentAmount);
     
     // Update the monthly balances record
     const updatedMonthlyBalances = {
       ...currentMonthlyBalances,
-      [paymentMonthId]: newBalance // Store the end-of-month balance
+      [paymentMonthId]: newMonthBalance
     };
     
-    // Update the debt balance and track payment
+    // Update the debt with ONLY the month-specific changes
+    // No longer modifying the main balance field directly
     const updatedDebt = {
       ...debt,
-      balance: newBalance,
-      totalPaid: debt.totalPaid + paymentAmount,
       monthlyPayments: updatedMonthlyPayments,
       monthlyBalances: updatedMonthlyBalances
     };
@@ -108,14 +130,10 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
         [paymentMonthId]: (goalMonthlyProgress[paymentMonthId] || 0) + paymentAmount
       };
       
-      // Calculate new total progress (sum of all monthly progress)
-      const newTotalProgress = Object.values(updatedGoalMonthlyProgress).reduce(
-        (sum, value) => sum + value, 0
-      );
-      
+      // Update the goal with ONLY the month-specific changes
+      // No longer updating the currentAmount field directly
       updateGoal({
         ...relatedGoal,
-        currentAmount: Math.min(relatedGoal.targetAmount, newTotalProgress),
         monthlyProgress: updatedGoalMonthlyProgress
       });
     }
@@ -153,7 +171,23 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
                     </div>
                   </FormControl>
                   <FormDescription>
-                    Current balance: ${debt.balance.toFixed(2)} | Minimum payment: ${debt.minimumPayment.toFixed(2)}
+                    Current balance: ${(() => {
+                      // Get monthly data from debt
+                      const { monthlyBalances, monthlyPayments, originalPrincipal } = debt;
+                      
+                      // If we have a month-specific balance for the active month, use that
+                      if (monthlyBalances && activeMonth && monthlyBalances[activeMonth] !== undefined) {
+                        return monthlyBalances[activeMonth].toFixed(2);
+                      }
+                      
+                      // Otherwise calculate from payments
+                      const allPayments = monthlyPayments || {};
+                      const totalPaid = Object.values(allPayments).reduce(
+                        (sum, amount) => sum + amount, 0
+                      );
+                      
+                      return Math.max(0, originalPrincipal - totalPaid).toFixed(2);
+                    })()} | Minimum payment: ${debt.minimumPayment.toFixed(2)}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
