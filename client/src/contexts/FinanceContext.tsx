@@ -154,6 +154,16 @@ const getMonthName = (monthId: string): string => {
   return date.toLocaleString('default', { month: 'long', year: 'numeric' });
 };
 
+// Helper function to save data to localStorage and update the auto-save timestamp
+const saveToLocalStorage = (key: string, data: any) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+  } catch (error) {
+    console.error(`Error saving ${key} to localStorage:`, error);
+  }
+};
+
 // Provider component
 export function FinanceProvider({ children }: { children: ReactNode }) {
   // State for all financial data
@@ -366,17 +376,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   // Save data to localStorage whenever it changes
   useEffect(() => {
     // Save months and active month
-    localStorage.setItem("months", JSON.stringify(months));
-    localStorage.setItem("activeMonth", activeMonth);
+    saveToLocalStorage("months", months);
+    saveToLocalStorage("activeMonth", activeMonth);
     
     // Save all other shared data
-    localStorage.setItem("userProfile", JSON.stringify(userProfile));
-    localStorage.setItem("recommendations", JSON.stringify(recommendations));
-    localStorage.setItem("alerts", JSON.stringify(alerts));
-    localStorage.setItem("scenarios", JSON.stringify(scenarios));
-    
-    // Update the last auto-save timestamp
-    localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    saveToLocalStorage("userProfile", userProfile);
+    saveToLocalStorage("recommendations", recommendations);
+    saveToLocalStorage("alerts", alerts);
+    saveToLocalStorage("scenarios", scenarios);
     
     // No need to save summary calculations as they're derived
   }, [months, activeMonth, userProfile, recommendations, alerts, scenarios]);
@@ -385,40 +392,35 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Save only if we have data for the active month
     if (incomes.length > 0) {
-      localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(incomes));
-      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+      saveToLocalStorage(`incomes_${activeMonth}`, incomes);
     }
   }, [incomes, activeMonth]);
   
   useEffect(() => {
     if (expenses.length > 0) {
-      localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(expenses));
-      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+      saveToLocalStorage(`expenses_${activeMonth}`, expenses);
     }
   }, [expenses, activeMonth]);
   
   useEffect(() => {
     if (budgets.length > 0) {
-      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(budgets));
-      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+      saveToLocalStorage(`budgets_${activeMonth}`, budgets);
     }
   }, [budgets, activeMonth]);
   
   useEffect(() => {
     if (goals.length > 0) {
-      localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(goals));
+      saveToLocalStorage(`goals_${activeMonth}`, goals);
       // Update legacy format for backward compatibility
-      localStorage.setItem("goals", JSON.stringify(goals));
-      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+      saveToLocalStorage("goals", goals);
     }
   }, [goals, activeMonth]);
   
   useEffect(() => {
     if (debts.length > 0) {
-      localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(debts));
+      saveToLocalStorage(`debts_${activeMonth}`, debts);
       // Update legacy format for backward compatibility
-      localStorage.setItem("debts", JSON.stringify(debts));
-      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+      saveToLocalStorage("debts", debts);
     }
   }, [debts, activeMonth]);
   
@@ -683,8 +685,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
-    localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    saveToLocalStorage(`incomes_${activeMonth}`, updatedIncomes);
     
     toast({
       title: "Income Added",
@@ -703,7 +704,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
+    saveToLocalStorage(`incomes_${activeMonth}`, updatedIncomes);
     
     toast({
       title: "Income Updated",
@@ -722,7 +723,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
+    saveToLocalStorage(`incomes_${activeMonth}`, updatedIncomes);
     
     toast({
       title: "Income Deleted",
@@ -743,7 +744,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
+    saveToLocalStorage(`expenses_${activeMonth}`, updatedExpenses);
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -768,7 +769,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
+    saveToLocalStorage(`expenses_${activeMonth}`, updatedExpenses);
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -793,7 +794,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(updatedExpenses));
+    saveToLocalStorage(`expenses_${activeMonth}`, updatedExpenses);
     
     // Update budget spent amount
     updateBudgetSpending();
@@ -825,7 +826,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       });
       
       // Save to localStorage
-      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
+      saveToLocalStorage(`budgets_${activeMonth}`, updatedBudgets);
     } else {
       // Create new budget
       const newBudget: Budget = {
@@ -842,7 +843,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       });
       
       // Save to localStorage
-      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
+      saveToLocalStorage(`budgets_${activeMonth}`, updatedBudgets);
     }
     
     // Update budget spent amount
@@ -870,7 +871,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
+    saveToLocalStorage(`budgets_${activeMonth}`, updatedBudgets);
     
     toast({
       title: "Budget Updated",
@@ -898,7 +899,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage
-    localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(updatedBudgets));
+    saveToLocalStorage(`budgets_${activeMonth}`, updatedBudgets);
   };
   
   // Goal management
@@ -920,8 +921,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
-    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
+    saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+    saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
     toast({
       title: "Goal Created",
@@ -940,8 +941,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
-    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
+    saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+    saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
     toast({
       title: "Goal Updated",
@@ -960,8 +961,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
-    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
+    saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+    saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
     toast({
       title: "Goal Deleted",
@@ -982,8 +983,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
-    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
+    saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
+    saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
     
     toast({
       title: "Debt Added",
@@ -1020,8 +1021,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
-    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
+    saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
+    saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
     
     toast({
       title: "Debt Updated",
@@ -1040,8 +1041,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     });
     
     // Save to localStorage (both month-specific and for backward compatibility)
-    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
-    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
+    saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
+    saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
     
     toast({
       title: "Debt Deleted",
@@ -1075,7 +1076,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const newScenario = { ...scenario, id: Date.now() };
     const updatedScenarios = [...scenarios, newScenario];
     setScenarios(updatedScenarios);
-    localStorage.setItem("scenarios", JSON.stringify(updatedScenarios));
+    saveToLocalStorage("scenarios", updatedScenarios);
     
     toast({
       title: "Scenario Created",
@@ -1087,7 +1088,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const updateScenario = (scenario: Scenario) => {
     const updatedScenarios = scenarios.map(s => s.id === scenario.id ? scenario : s);
     setScenarios(updatedScenarios);
-    localStorage.setItem("scenarios", JSON.stringify(updatedScenarios));
+    saveToLocalStorage("scenarios", updatedScenarios);
     
     toast({
       title: "Scenario Updated",
@@ -1099,7 +1100,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const deleteScenario = (id: number) => {
     const updatedScenarios = scenarios.filter(s => s.id !== id);
     setScenarios(updatedScenarios);
-    localStorage.setItem("scenarios", JSON.stringify(updatedScenarios));
+    saveToLocalStorage("scenarios", updatedScenarios);
     
     toast({
       title: "Scenario Deleted",
@@ -1121,7 +1122,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setMonths(updatedMonths);
     
     // Save updated months to localStorage
-    localStorage.setItem("months", JSON.stringify(updatedMonths));
+    saveToLocalStorage("months", updatedMonths);
     
     // Check if we need to ensure debt and goal data exists for this month
     const sortedMonths = [...months.map(m => m.id)].sort();
@@ -1178,7 +1179,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     setMonths(updatedMonths);
     
     // Save updated months to localStorage
-    localStorage.setItem("months", JSON.stringify(updatedMonths));
+    saveToLocalStorage("months", updatedMonths);
     
     // Find a previous month to copy data from
     const sortedMonths = [...months.map(m => m.id)].sort();
@@ -1203,7 +1204,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           });
           
           // Save to localStorage
-          localStorage.setItem(`budgets_${monthId}`, JSON.stringify(newBudgets));
+          saveToLocalStorage(`budgets_${monthId}`, newBudgets);
         }
       }
     }
@@ -1364,8 +1365,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ...allGoals,
         [activeMonth]: updatedGoals
       });
-      localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
-      localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
+      saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+      saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
 
       toast({
         title: "Goals Prioritized",
@@ -1515,8 +1516,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
         
         // Save to localStorage (both month-specific and for backward compatibility)
-        localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
-        localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
+        saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+        saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
         
         toast({
           title: "Recommendations Generated",
@@ -1714,7 +1715,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
     
     // Save to localStorage
-    localStorage.setItem(`goals_${targetMonthId}`, JSON.stringify(updatedTargetGoals));
+    saveToLocalStorage(`goals_${targetMonthId}`, updatedTargetGoals);
     
     // 2. Propagate Debts
     // Get source month debts
@@ -1785,13 +1786,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }));
     
     // Save to localStorage
-    localStorage.setItem(`debts_${targetMonthId}`, JSON.stringify(updatedTargetDebts));
+    saveToLocalStorage(`debts_${targetMonthId}`, updatedTargetDebts);
   };
   
   // User profile management
   const updateUserProfile = (profile: UserProfile) => {
     setUserProfile(profile);
-    localStorage.setItem("userProfile", JSON.stringify(profile));
+    saveToLocalStorage("userProfile", profile);
     
     toast({
       title: "Profile Updated",

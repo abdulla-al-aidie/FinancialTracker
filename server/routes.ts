@@ -5,6 +5,7 @@ import { storage } from "./storage";
 // Import OpenAI for server-side API calls
 import OpenAI from "openai";
 import { log } from "./vite";
+import Database from '@replit/database';
 
 // Get API key from environment variable
 const apiKey = process.env.OPENAI_API_KEY || "";
@@ -16,6 +17,10 @@ log(`OpenAI API key ${apiKey ? "is available" : "is missing"}`);
 const openaiClient = new OpenAI({
   apiKey: apiKey
 });
+
+// Initialize Replit Database
+const replitDb = new Database();
+const DB_PREFIX = 'finance_app_';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add OpenAI proxy endpoint for secure API requests from frontend
@@ -1273,6 +1278,174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error saving data:", error);
       res.status(500).json({
         error: "Failed to save data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // Replit Database Endpoints
+  
+  // Endpoint to save data to Replit Database
+  app.post("/api/replit-db/save", async (req, res) => {
+    try {
+      const { key, data } = req.body;
+      
+      if (!key) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "Key is required"
+        });
+      }
+      
+      const prefixedKey = `${DB_PREFIX}${key}`;
+      await replitDb.set(prefixedKey, JSON.stringify(data));
+      
+      // Update last save timestamp
+      await replitDb.set(`${DB_PREFIX}lastAutoSaveTime`, new Date().toISOString());
+      
+      res.json({
+        success: true,
+        message: "Data saved successfully"
+      });
+    } catch (error) {
+      console.error(`Error saving data to Replit DB:`, error);
+      res.status(500).json({
+        error: "Failed to save data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Endpoint to get data from Replit Database
+  app.get("/api/replit-db/get/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      
+      if (!key) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "Key is required"
+        });
+      }
+      
+      const prefixedKey = `${DB_PREFIX}${key}`;
+      const storedData = await replitDb.get(prefixedKey);
+      
+      if (storedData === null || storedData === undefined) {
+        return res.json({ data: null });
+      }
+      
+      res.json({
+        data: JSON.parse(storedData as string)
+      });
+    } catch (error) {
+      console.error(`Error retrieving data from Replit DB:`, error);
+      res.status(500).json({
+        error: "Failed to retrieve data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Endpoint to delete data from Replit Database
+  app.delete("/api/replit-db/delete/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      
+      if (!key) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "Key is required"
+        });
+      }
+      
+      const prefixedKey = `${DB_PREFIX}${key}`;
+      await replitDb.delete(prefixedKey);
+      
+      res.json({
+        success: true,
+        message: "Data deleted successfully"
+      });
+    } catch (error) {
+      console.error(`Error deleting data from Replit DB:`, error);
+      res.status(500).json({
+        error: "Failed to delete data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Endpoint to list keys from Replit Database
+  app.get("/api/replit-db/list/:prefix?", async (req, res) => {
+    try {
+      const { prefix } = req.params;
+      const fullPrefix = prefix ? `${DB_PREFIX}${prefix}` : DB_PREFIX;
+      
+      const keys = await replitDb.list(fullPrefix);
+      
+      // Remove DB_PREFIX from keys
+      const processedKeys = Array.isArray(keys) 
+        ? keys.map(key => key.substring(DB_PREFIX.length))
+        : [];
+      
+      res.json({
+        keys: processedKeys
+      });
+    } catch (error) {
+      console.error(`Error listing keys from Replit DB:`, error);
+      res.status(500).json({
+        error: "Failed to list keys",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Endpoint to get last save time
+  app.get("/api/replit-db/last-save-time", async (req, res) => {
+    try {
+      const timestamp = await replitDb.get(`${DB_PREFIX}lastAutoSaveTime`);
+      
+      res.json({
+        timestamp: timestamp || null
+      });
+    } catch (error) {
+      console.error(`Error getting last save time:`, error);
+      res.status(500).json({
+        error: "Failed to get last save time",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Endpoint to migrate data from localStorage (called by client)
+  app.post("/api/replit-db/migrate", async (req, res) => {
+    try {
+      const { data } = req.body;
+      
+      if (!data || Object.keys(data).length === 0) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "No data provided for migration"
+        });
+      }
+      
+      // Save each key-value pair to the database
+      for (const key of Object.keys(data)) {
+        const prefixedKey = `${DB_PREFIX}${key}`;
+        await replitDb.set(prefixedKey, JSON.stringify(data[key]));
+      }
+      
+      // Set the last save time
+      await replitDb.set(`${DB_PREFIX}lastAutoSaveTime`, new Date().toISOString());
+      
+      res.json({
+        success: true,
+        message: "Data migrated successfully"
+      });
+    } catch (error) {
+      console.error(`Error migrating data to Replit DB:`, error);
+      res.status(500).json({
+        error: "Failed to migrate data",
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
     }

@@ -2,58 +2,83 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Save, Check, AlertCircle } from "lucide-react";
+import { Save, Check, AlertCircle, Cloud } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getLastSaveTime, migrateFromLocalStorage } from "@/utils/database";
 
 export default function SaveButton() {
   const [isSaving, setIsSaving] = useState(false);
   const [autoSaved, setAutoSaved] = useState(true);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [hasMigrated, setHasMigrated] = useState(false);
   const { toast } = useToast();
   const finance = useFinance();
   
   // Set last saved time on initial render
   useEffect(() => {
-    const savedTime = localStorage.getItem("lastAutoSaveTime");
-    if (savedTime) {
-      setLastSaved(savedTime);
-    }
+    const fetchLastSaveTime = async () => {
+      try {
+        const savedTime = await getLastSaveTime();
+        if (savedTime) {
+          setLastSaved(savedTime);
+          setAutoSaved(true);
+        } else {
+          // If no saved time exists in the database, check localStorage
+          const localStorageSavedTime = localStorage.getItem("lastAutoSaveTime");
+          if (localStorageSavedTime) {
+            setLastSaved(localStorageSavedTime);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching last save time:", error);
+      }
+    };
+    
+    fetchLastSaveTime();
   }, []);
   
-  // Update last saved time every 5 seconds
+  // Update last saved time every 10 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      const savedTime = localStorage.getItem("lastAutoSaveTime");
-      if (savedTime) {
-        setLastSaved(savedTime);
-        setAutoSaved(true);
+    const interval = setInterval(async () => {
+      try {
+        const savedTime = await getLastSaveTime();
+        if (savedTime) {
+          setLastSaved(savedTime);
+          setAutoSaved(true);
+        }
+      } catch (error) {
+        console.error("Error fetching last save time:", error);
       }
-    }, 5000);
+    }, 10000);
     
     return () => clearInterval(interval);
   }, []);
   
-  const saveDataToDatabase = async () => {
+  const migrateDataToDb = async () => {
     setIsSaving(true);
     
     try {
+      await migrateFromLocalStorage();
+      setHasMigrated(true);
+      
       toast({
-        title: "Auto-Save Enabled",
-        description: "Your data is automatically saved to your browser's local storage. No need to manually save!",
+        title: "Migration Complete",
+        description: "Your data has been migrated from browser storage to Replit Database for improved persistence.",
         variant: "default"
       });
       
-      // Store current timestamp as last save time
-      const now = new Date().toISOString();
-      localStorage.setItem("lastAutoSaveTime", now);
-      setLastSaved(now);
-      setAutoSaved(true);
+      // Refresh last saved time
+      const savedTime = await getLastSaveTime();
+      if (savedTime) {
+        setLastSaved(savedTime);
+        setAutoSaved(true);
+      }
     } catch (error) {
-      console.error("Error with auto-save notification:", error);
+      console.error("Error during migration:", error);
       toast({
-        title: "Important Note",
-        description: "All changes are automatically saved to browser storage. Database saving is not currently available.",
-        variant: "default"
+        title: "Migration Failed",
+        description: "There was an error migrating your data. Your data is still safely stored in browser storage.",
+        variant: "destructive" 
       });
     } finally {
       setIsSaving(false);
@@ -84,30 +109,38 @@ export default function SaveButton() {
           <Button 
             className="w-full"
             variant={autoSaved ? "outline" : "default"}
-            onClick={saveDataToDatabase}
-            disabled={isSaving}
+            onClick={migrateDataToDb}
+            disabled={isSaving || hasMigrated}
           >
             {isSaving ? (
               <>
                 <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
-                Checking...
+                Migrating to Database...
+              </>
+            ) : hasMigrated ? (
+              <>
+                <Cloud className="mr-2 h-4 w-4 text-green-500" />
+                Cloud Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
               </>
             ) : autoSaved ? (
               <>
                 <Check className="mr-2 h-4 w-4 text-green-500" />
-                Auto-Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
+                Click to Migrate to Database
               </>
             ) : (
               <>
                 <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
-                Auto-Save Status
+                Migrate to Database
               </>
             )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p className="w-[220px] text-sm">
-            All changes are automatically saved to your browser's local storage. 
+          <p className="w-[250px] text-sm">
+            {hasMigrated 
+              ? "Your data is now safely stored in Replit's persistent database. Changes are automatically saved."
+              : "Click to migrate your data from browser storage to Replit's persistent database for improved reliability."
+            }
             {lastSaved && ` Last saved: ${getTimeAgo(lastSaved)}`}
           </p>
         </TooltipContent>
