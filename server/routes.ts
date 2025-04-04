@@ -593,17 +593,20 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
       const prompt = `
         As a financial advisor and educator, answer the following question about personal finance, investments, financial planning, or related topics.
 
-        Provide a comprehensive, accurate, and educational response that helps the user understand the financial concept or answer to their question.
-        Include practical advice when applicable and explain complex terms in an accessible way.
+        Provide a visually appealing, accurate, and educational response that helps the user understand the financial concept or answer to their question.
+        Format your response with clear headings, concise paragraphs, and bullet points for better readability.
+        Avoid using formats like "1. **Direct Answer:**" that look like generic AI responses.
+        
+        Use a conversational, friendly tone and explain complex terms in an accessible way.
         If the question is ambiguous or requires more context, provide the most helpful general information you can.
 
         QUESTION: ${question}
 
-        Your response should be formatted with:
-        1. A direct answer to the question
-        2. Additional context or explanation
-        3. Practical tips or applications when relevant
-        4. Any important considerations or caveats
+        Structure your response in the following way:
+        - Start with a direct, plain language answer to the question (no heading needed)
+        - Then add 2-3 clear sections with helpful contextual information
+        - Use bullet points (• symbol) for lists of tips or examples
+        - End with important considerations or next steps if applicable
       `;
 
       const response = await openaiClient.chat.completions.create({

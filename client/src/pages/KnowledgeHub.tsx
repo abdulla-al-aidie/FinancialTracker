@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Search, BookOpen, Sparkles, GraduationCap } from "lucide-react";
+import { Loader2, Search, BookOpen, Sparkles, GraduationCap, Clock } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -85,19 +85,19 @@ export default function KnowledgeHub() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
+          <Card className="overflow-hidden border-blue-100 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-slate-50 border-b pb-4">
               <CardTitle className="flex items-center">
-                <Search className="h-5 w-5 mr-2" />
-                Ask a Question
+                <Search className="h-5 w-5 mr-2 text-primary" />
+                Ask a Financial Question
               </CardTitle>
               <CardDescription>
-                Ask any question about personal finance, investments, or financial planning
+                Get expert answers about personal finance, investments, or financial planning
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-5">
               <div className="space-y-4">
-                <div className="flex space-x-2">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Input
                     placeholder="E.g., How do I start investing with little money?"
                     value={question}
@@ -107,29 +107,46 @@ export default function KnowledgeHub() {
                   <Button 
                     onClick={() => handleAskQuestion()} 
                     disabled={isLoading}
+                    className="sm:w-auto w-full"
                   >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Asking
+                        Generating Answer...
                       </>
                     ) : (
-                      "Ask"
+                      "Ask Question"
                     )}
                   </Button>
                 </div>
 
                 {answer && (
-                  <Card className="mt-4 bg-muted/40">
-                    <CardHeader className="pb-2">
+                  <Card className="mt-4 bg-gradient-to-br from-blue-50 to-slate-50 shadow-md">
+                    <CardHeader className="pb-2 border-b">
                       <CardTitle className="text-lg flex items-center">
                         <GraduationCap className="h-5 w-5 mr-2 text-primary" />
-                        Answer
+                        Financial Insight
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="whitespace-pre-line">
-                        {answer}
+                    <CardContent className="pt-4">
+                      <div className="prose prose-slate max-w-none">
+                        {answer.split('\n\n').map((paragraph, idx) => {
+                          // Replace numbered list formatting from OpenAI
+                          const cleanedText = paragraph
+                            .replace(/^\d+\.\s+\*\*([^*]+)\*\*:/g, '<strong>$1</strong>')
+                            .replace(/^\s*\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+                            
+                          if (idx === 0) {
+                            return <p key={idx} className="text-lg font-medium text-primary">{cleanedText}</p>;
+                          } else if (cleanedText.includes('<strong>')) {
+                            return <div key={idx} dangerouslySetInnerHTML={{ __html: cleanedText }} className="my-3" />;
+                          } else if (cleanedText.startsWith('•')) {
+                            return <p key={idx} className="my-1.5 ml-4 text-sm">{cleanedText}</p>;
+                          } else {
+                            return <p key={idx} className="my-2 text-gray-700">{cleanedText}</p>;
+                          }
+                        })}
                       </div>
                     </CardContent>
                   </Card>
@@ -141,23 +158,23 @@ export default function KnowledgeHub() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Sparkles className="h-5 w-5 mr-2" />
-                Quick Questions
+          <Card className="overflow-hidden border-blue-100 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b pb-2">
+              <CardTitle className="flex items-center text-base md:text-lg flex-wrap">
+                <Sparkles className="h-5 w-5 mr-2 flex-shrink-0 text-primary" />
+                <span>Quick Questions</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs md:text-sm">
                 Popular financial questions to get you started
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
+            <CardContent className="pt-3">
+              <div className="space-y-2">
                 {quickQuestions.map((q, i) => (
                   <Button 
                     key={i} 
                     variant="outline" 
-                    className="w-full justify-start h-auto py-2 px-3 text-left"
+                    className="w-full justify-start h-auto py-2 px-3 text-left text-sm whitespace-normal hover:bg-blue-50/50 transition-colors"
                     onClick={() => {
                       setQuestion(q);
                       handleAskQuestion(q);
@@ -171,17 +188,20 @@ export default function KnowledgeHub() {
           </Card>
 
           {searchHistory.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm font-medium">Recent Searches</CardTitle>
+            <Card className="overflow-hidden border-blue-100 shadow-md">
+              <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b pb-2">
+                <CardTitle className="flex items-center text-base">
+                  <Clock className="h-4 w-4 mr-2 flex-shrink-0 text-primary" />
+                  <span>Recent Searches</span>
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-3">
                 <div className="flex flex-wrap gap-2">
                   {searchHistory.map((q, i) => (
                     <Badge 
                       key={i} 
                       variant="outline" 
-                      className="cursor-pointer"
+                      className="cursor-pointer hover:bg-blue-50/70 transition-colors py-1.5 border-blue-100"
                       onClick={() => {
                         setQuestion(q);
                         handleAskQuestion(q);
