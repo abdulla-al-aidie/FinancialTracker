@@ -2,6 +2,14 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
+// Check for required environment variables
+const openaiKey = process.env.OPENAI_API_KEY;
+if (!openaiKey) {
+  log("WARNING: OPENAI_API_KEY environment variable is not set. AI features will not work.", "server");
+} else {
+  log("OpenAI API key is configured", "server");
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

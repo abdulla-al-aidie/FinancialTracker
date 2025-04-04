@@ -4,10 +4,17 @@ import { storage } from "./storage";
 
 // Import OpenAI for server-side API calls
 import OpenAI from "openai";
+import { log } from "./vite";
+
+// Get API key from environment variable
+const apiKey = process.env.OPENAI_API_KEY || "";
+
+// Log API key status (but not the actual key)
+log(`OpenAI API key ${apiKey ? "is available" : "is missing"}`);
 
 // Initialize OpenAI client with API key from environment variable
 const openaiClient = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ""
+  apiKey: apiKey
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -87,7 +94,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: unknown) {
       console.error("Error calling OpenAI API:", error);
-      // Handle the error properly based on type
+      
+      // Check for API key issues
+      if (error instanceof Error && 
+          (error.message.includes("API key") || error.message.includes("authentication"))) {
+        log("OpenAI API key error detected. Please check your API key configuration.");
+        return res.status(500).json({
+          error: "API Configuration Error",
+          message: "There's an issue with the OpenAI API key. Please contact the administrator."
+        });
+      }
+      
+      // Handle other errors
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
       res.status(500).json({
         error: "Failed to generate insights",

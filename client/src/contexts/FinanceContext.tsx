@@ -287,6 +287,35 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
   
   // Generate AI recommendations using OpenAI
+  // Fallback insights in case the OpenAI API is unavailable
+  const FALLBACK_INSIGHTS = [
+    {
+      type: "Budget Optimization",
+      description: "Consider reviewing your top expense categories and look for opportunities to reduce spending without significantly impacting your lifestyle. Small changes in daily habits can lead to substantial monthly savings.",
+      impact: "Potential monthly savings"
+    },
+    {
+      type: "Emergency Fund",
+      description: "Aim to build an emergency fund covering 3-6 months of essential expenses. This provides financial security during unexpected events like medical emergencies or job loss.",
+      impact: "Increased financial security"
+    },
+    {
+      type: "Debt Management",
+      description: "If you have multiple debts, consider using either the snowball method (paying smallest balances first) or avalanche method (focusing on highest interest rates first) to systematically reduce debt.",
+      impact: "Reduced interest payments"
+    },
+    {
+      type: "Automated Savings",
+      description: "Set up automatic transfers to your savings account on paydays. This 'pay yourself first' approach ensures consistent saving before you have a chance to spend the money.",
+      impact: "Improved saving habits"
+    },
+    {
+      type: "Expense Tracking",
+      description: "Regularly review your transactions and categorize them correctly. This helps identify spending patterns and areas where you might be overspending without realizing it.",
+      impact: "Better financial awareness"
+    }
+  ];
+
   const generateRecommendations = async () => {
     try {
       // Prepare data for the OpenAI API
@@ -308,19 +337,41 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ? debts.reduce((sum, debt) => sum + debt.interestRate, 0) / debts.length
         : 0;
       
-      // Call the improved OpenAI function for detailed insights
-      const aiInsights = await generateFinancialInsights({
-        totalIncome,
-        totalExpenses,
-        netCashflow,
-        savingsRate,
-        topExpenseCategories,
-        overBudgetCategories,
-        debtTotal,
-        averageInterestRate: avgInterestRate
-      });
+      let aiInsights;
+      let usingFallback = false;
       
-      // Convert AI insights to recommendations
+      try {
+        // Call the improved OpenAI function for detailed insights
+        aiInsights = await generateFinancialInsights({
+          totalIncome,
+          totalExpenses,
+          netCashflow,
+          savingsRate,
+          topExpenseCategories,
+          overBudgetCategories,
+          debtTotal,
+          averageInterestRate: avgInterestRate
+        });
+        
+        // Check if the API returned an error response
+        const hasError = aiInsights.some((insight: {type: string}) => 
+          insight.type.includes("Error") || 
+          insight.type.includes("Service Unavailable") ||
+          insight.type.includes("API Configuration")
+        );
+        
+        if (hasError) {
+          console.log("OpenAI returned an error response, using fallback insights");
+          aiInsights = FALLBACK_INSIGHTS;
+          usingFallback = true;
+        }
+      } catch (error) {
+        console.error("Error calling OpenAI API, using fallback insights:", error);
+        aiInsights = FALLBACK_INSIGHTS;
+        usingFallback = true;
+      }
+      
+      // Convert insights to recommendations
       const newRecommendations: Recommendation[] = aiInsights.map((insight: {type: string; description: string; impact: string}) => ({
         id: Date.now() + Math.random() * 1000,
         type: insight.type,
@@ -334,11 +385,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       if (newRecommendations.length > 0) {
         setRecommendations(prev => [...prev, ...newRecommendations]);
         
-        toast({
-          title: `${newRecommendations.length} new recommendations available`,
-          description: "We've generated detailed financial insights based on your data.",
-          variant: "default"
-        });
+        if (usingFallback) {
+          toast({
+            title: `${newRecommendations.length} general recommendations available`,
+            description: "We've provided general financial advice. Personalized AI insights are currently unavailable.",
+            variant: "default"
+          });
+        } else {
+          toast({
+            title: `${newRecommendations.length} new recommendations available`,
+            description: "We've generated detailed financial insights based on your data.",
+            variant: "default"
+          });
+        }
       } else {
         toast({
           title: "Could not generate recommendations",
@@ -347,11 +406,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch (error) {
-      console.error("Error generating AI recommendations:", error);
+      console.error("Error generating recommendations:", error);
+      
+      // Create fallback recommendations as a last resort
+      const fallbackRecommendations: Recommendation[] = FALLBACK_INSIGHTS.map(insight => ({
+        id: Date.now() + Math.random() * 1000,
+        type: insight.type,
+        description: insight.description,
+        impact: insight.impact,
+        dateGenerated: new Date().toISOString(),
+        isRead: false
+      }));
+      
+      setRecommendations(prev => [...prev, ...fallbackRecommendations]);
+      
       toast({
-        title: "Error generating insights",
-        description: "We encountered an issue when analyzing your financial data.",
-        variant: "destructive"
+        title: "Using general recommendations",
+        description: "AI service is unavailable. We've provided general financial advice instead.",
+        variant: "default"
       });
     }
   };
