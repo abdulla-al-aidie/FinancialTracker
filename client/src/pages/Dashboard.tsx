@@ -79,7 +79,8 @@ export default function Dashboard() {
     recommendations = [],
     alerts = [],
     deleteDebt,
-    activeMonth
+    activeMonth,
+    userProfile
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("overview");
@@ -377,6 +378,11 @@ export default function Dashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
+            {/* Welcome Message */}
+            <h1 className="text-3xl font-bold mb-4">
+              {userProfile && userProfile.name ? `Welcome, ${userProfile.name}` : 'Welcome'}
+            </h1>
+            
             {/* Month Selector */}
             <MonthSelector />
             
