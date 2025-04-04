@@ -18,7 +18,7 @@ type HealthResponse = { score: number; feedback: string };
 type GoalPriorityResponse = Array<{ 
   goalId: number; 
   priorityScore: number; 
-  reasoning: string;
+  reasoning: string; // Detailed reasoning provided by the AI for the priority score
 }>;
 type GoalRecommendationResponse = Array<{
   goalId: number;
@@ -129,8 +129,9 @@ export async function analyzeFinancialHealth(data: {
 }
 
 /**
- * Prioritize financial goals using AI analysis
- * This calculates the optimal priority order for user goals based on financial data
+ * Prioritize financial goals using comprehensive AI analysis of the user's financial situation
+ * This calculates the optimal priority order for user goals based on all financial data including
+ * goals, expenses, income, debts, and their respective details
  */
 export async function prioritizeGoals(data: {
   goals: Array<{
@@ -153,6 +154,21 @@ export async function prioritizeGoals(data: {
     category: string; 
     amount: number;
     percentOfTotalExpenses: number;
+  }>;
+  // New parameters for better analysis
+  debts?: Array<{
+    name: string;
+    balance: number;
+    interestRate: number;
+    minimumPayment: number;
+    priority?: number;
+    originalPrincipal: number;
+    totalPaid: number;
+  }>;
+  income?: Array<{
+    type: string;
+    amount: number;
+    description?: string;
   }>;
 }): Promise<Array<{ goalId: number; priorityScore: number; reasoning: string }>> {
   try {

@@ -1025,12 +1025,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 
     try {
       toast({
-        title: "Analyzing Goals",
-        description: "Our AI is analyzing your financial data and goals...",
+        title: "Analyzing Financial Situation",
+        description: "Our AI is analyzing your complete financial data to optimize your goals...",
         variant: "default"
       });
 
-      // Prepare data for OpenAI API
+      // Prepare expense categories data for OpenAI API
       const topExpenseCategories = Object.values(ExpenseCategory).map(category => {
         const categoryExpenses = expenses.filter(exp => exp.category === category);
         const amount = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
@@ -1042,8 +1042,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       .filter(category => category.amount > 0)
       .sort((a, b) => b.amount - a.amount);
 
+      // Calculate debt total 
       const debtTotal = debts.reduce((sum, debt) => sum + debt.balance, 0);
       
+      // Format income data
+      const incomeData = incomes.map(income => ({
+        type: income.type,
+        amount: income.amount,
+        description: income.description
+      }));
+
+      // Send comprehensive financial data to OpenAI for prioritization
       const priorityData = await prioritizeGoals({
         goals: goals.map(goal => ({
           id: goal.id,
@@ -1061,7 +1070,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           debtTotal,
           monthlyNetCashflow: netCashflow
         },
-        expenseBreakdown: topExpenseCategories
+        expenseBreakdown: topExpenseCategories,
+        // Add debt and income data for more comprehensive analysis
+        debts: debts.map(debt => ({
+          name: debt.name,
+          balance: debt.balance,
+          interestRate: debt.interestRate,
+          minimumPayment: debt.minimumPayment,
+          priority: debt.priority,
+          originalPrincipal: debt.originalPrincipal,
+          totalPaid: debt.totalPaid
+        })),
+        income: incomeData
       });
 
       if (priorityData.length === 0) {
@@ -1073,24 +1093,43 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Update goal priorities based on AI recommendations
+      // Update goal priorities and store the reasoning for each goal
       const updatedGoals = goals.map(goal => {
         const priority = priorityData.find(p => p.goalId === goal.id);
-        return priority 
-          ? { 
-              ...goal, 
-              priority: priority.priorityScore,
-              aiRecommendations: goal.aiRecommendations || [] // Preserve existing recommendations
-            } 
-          : goal;
+        if (!priority) return goal;
+        
+        // Create a recommendation from the AI reasoning if provided
+        const aiReasons = priority.reasoning ? [
+          {
+            id: Date.now(),
+            description: priority.reasoning,
+            potentialImpact: priority.priorityScore >= 8 ? "High" : 
+                             priority.priorityScore >= 5 ? "Medium" : "Low",
+            estimatedTimeReduction: "Optimized priority ranking",
+            requiredActions: ["Follow the prioritization advice", "Focus on higher priority goals first"]
+          }
+        ] : [];
+        
+        // Merge with existing recommendations if any
+        const combinedRecommendations = [
+          ...aiReasons,
+          ...(goal.aiRecommendations || [])
+        ].slice(0, 5); // Keep up to 5 most recent recommendations
+        
+        return { 
+          ...goal, 
+          priority: priority.priorityScore,
+          aiRecommendations: combinedRecommendations
+        };
       });
 
+      // Save updated goals to state and localStorage
       setGoals(updatedGoals);
       localStorage.setItem("goals", JSON.stringify(updatedGoals));
 
       toast({
         title: "Goals Prioritized",
-        description: "Your financial goals have been prioritized based on AI analysis of your financial situation.",
+        description: "Your financial goals have been prioritized based on comprehensive AI analysis of your entire financial situation.",
         variant: "default"
       });
 
@@ -1098,7 +1137,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       console.error("Error prioritizing goals:", error);
       toast({
         title: "Prioritization Failed",
-        description: "We encountered an error while prioritizing your goals. Please try again later.",
+        description: "We encountered an error while analyzing your financial data. Please try again later.",
         variant: "destructive"
       });
     }

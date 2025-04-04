@@ -226,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add endpoint for goal prioritization
   app.post("/api/openai/prioritize-goals", async (req, res) => {
     try {
-      const { goals, financialSnapshot, expenseBreakdown } = req.body;
+      const { goals, financialSnapshot, expenseBreakdown, debts, income } = req.body;
       
       // Ensure we have goals to analyze
       if (!goals || !Array.isArray(goals) || goals.length === 0) {
@@ -237,8 +237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const prompt = `
-        As an AI financial advisor, prioritize these financial goals based on the financial data provided.
-        Assign each goal a priority score from 1-10 (10 being highest) and provide reasoning.
+        As an expert financial advisor, carefully prioritize these financial goals based on a comprehensive analysis of this person's entire financial situation.
+        Assign each goal a priority score from 1-10 (10 being highest) and provide detailed reasoning.
         
         GOALS:
         ${goals.map((goal, index) => `
@@ -262,17 +262,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `- ${expense.category}: $${expense.amount} (${expense.percentOfTotalExpenses}% of expenses)`
         ).join('\n')}
         
-        Based on the current financial situation:
-        1. Prioritize debt-related goals when debt is significant
-        2. Prioritize emergency funding if it's not adequate
-        3. Consider time sensitivity of goals
-        4. Evaluate realistic achievement potential within the timeframe
-        5. Consider the current progress toward each goal
+        INCOME SOURCES:
+        ${income ? income.map((inc: { type: string; amount: number; description?: string }) => 
+          `- ${inc.type}${inc.description ? ` - ${inc.description}` : ''}: $${inc.amount}`
+        ).join('\n') : 'No income details provided'}
+        
+        DEBTS:
+        ${debts && debts.length > 0 ? debts.map((debt: { 
+          name: string; 
+          balance: number; 
+          interestRate: number; 
+          minimumPayment: number;
+          priority?: number;
+          originalPrincipal: number;
+          totalPaid: number;
+        }) => `
+          - ${debt.name}
+          - Current Balance: $${debt.balance}
+          - Interest Rate: ${debt.interestRate}%
+          - Minimum Payment: $${debt.minimumPayment}
+          - Original Amount: $${debt.originalPrincipal}
+          - Total Paid: $${debt.totalPaid}
+          - User-Assigned Priority: ${debt.priority !== undefined ? `${debt.priority}/10` : 'Not specified'}
+          - Paid Off Percentage: ${debt.originalPrincipal > 0 ? Math.round((debt.totalPaid / debt.originalPrincipal) * 100) : 0}%
+        `).join('\n') : 'No debt information provided'}
+        
+        PRIORITIZATION RULES:
+        1. Consider all aspects of the financial situation holistically
+        2. Prioritize high-interest debt payoff when significantly impacting cashflow
+        3. Respect user-assigned debt priorities when evaluating debt-related goals
+        4. Prioritize emergency funds if they're inadequate (less than 3-6 months of expenses)
+        5. For savings goals, consider:
+           - Time sensitivity (how soon the goal deadline is)
+           - Progress already made (momentum)
+           - Impact on overall financial wellbeing
+           - Realistic achievability given current financial situation
+        6. For debt payoff goals, consider:
+           - Interest rate (higher rates generally get higher priority)
+           - Debt-to-income ratio impact
+           - Alignment with any user-assigned debt priorities
+        7. Balance short-term needs with long-term financial health
+        8. Consider special circumstances mentioned in goal descriptions
+        
+        PROVIDE ACTIONABLE REASONS:
+        For each goal, include specific, personalized reasoning that explains:
+        - Why this priority level was assigned
+        - How it relates to the person's overall financial situation
+        - Any trade-offs considered
+        - Brief 1-2 sentence advice on how to approach this goal given its priority
         
         Respond with a JSON array containing objects with these properties:
         - goalId: the ID of the goal
-        - priorityScore: number from 1-10
-        - reasoning: brief explanation for the score
+        - priorityScore: number from 1-10 (10 highest)
+        - reasoning: detailed explanation for the score with actionable advice
       `;
 
       // the newest OpenAI model is "gpt-4o" which was released May 13, 2024

@@ -232,7 +232,10 @@ export default function AIGoalPrioritization() {
                         <span className="font-medium">AI Recommendations</span>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {goal.aiRecommendations[0].description}
+                        {/* Show truncated description but ensure it's not too long for the card */}
+                        {goal.aiRecommendations[0].description.length > 150 
+                          ? `${goal.aiRecommendations[0].description.substring(0, 150)}...` 
+                          : goal.aiRecommendations[0].description}
                         <div className="mt-1 flex items-center text-xs">
                           <span className="font-medium text-primary">
                             Impact: {goal.aiRecommendations[0].potentialImpact}
