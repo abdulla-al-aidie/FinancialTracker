@@ -131,8 +131,9 @@ export default function KnowledgeHub() {
                     <CardContent className="pt-4">
                       <div className="prose prose-slate max-w-none">
                         {answer.split('\n\n').map((paragraph, idx) => {
-                          // Replace numbered list formatting from OpenAI
-                          const cleanedText = paragraph
+                          // Replace OpenAI formatting patterns
+                          let cleanedText = paragraph
+                            .replace(/^###\s+(.+)$/g, '<strong>• $1</strong>')
                             .replace(/^\d+\.\s+\*\*([^*]+)\*\*:/g, '<strong>$1</strong>')
                             .replace(/^\s*\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
                             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');

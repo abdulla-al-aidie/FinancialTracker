@@ -604,7 +604,7 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
 
         Structure your response in the following way:
         - Start with a direct, plain language answer to the question (no heading needed)
-        - Then add 2-3 clear sections with helpful contextual information
+        - Then add 2-3 clear sections with helpful contextual information using "• Heading Text" instead of "### Heading Text"
         - Use bullet points (• symbol) for lists of tips or examples
         - End with important considerations or next steps if applicable
       `;
