@@ -111,26 +111,26 @@ export const listDbKeys = async (prefix: string = ''): Promise<string[]> => {
 };
 
 /**
- * Convert localStorage data to Replit DB (migration helper)
+ * Save localStorage data to Replit DB
  */
-export const migrateFromLocalStorage = async (): Promise<void> => {
+export const saveFromLocalStorage = async (): Promise<void> => {
   try {
-    // Collect all data to migrate in a single object
-    const dataToMigrate: Record<string, any> = {};
+    // Collect all data to save in a single object
+    const dataToSave: Record<string, any> = {};
     
-    // Migrate common keys
-    const keysToMigrate = [
+    // Save common keys
+    const keysToSave = [
       'months', 'goals', 'debts', 'scenarios', 'userProfile'
     ];
     
-    for (const key of keysToMigrate) {
+    for (const key of keysToSave) {
       const data = localStorage.getItem(key);
       if (data) {
-        dataToMigrate[key] = JSON.parse(data);
+        dataToSave[key] = JSON.parse(data);
       }
     }
     
-    // Migrate month-specific data
+    // Save month-specific data
     const monthsData = localStorage.getItem('months');
     if (monthsData) {
       const months = JSON.parse(monthsData);
@@ -138,7 +138,7 @@ export const migrateFromLocalStorage = async (): Promise<void> => {
       for (const month of months) {
         const monthId = month.id;
         
-        // Migrate month-specific data
+        // Save month-specific data
         const monthKeys = [
           `incomes_${monthId}`,
           `expenses_${monthId}`,
@@ -150,29 +150,29 @@ export const migrateFromLocalStorage = async (): Promise<void> => {
         for (const key of monthKeys) {
           const data = localStorage.getItem(key);
           if (data) {
-            dataToMigrate[key] = JSON.parse(data);
+            dataToSave[key] = JSON.parse(data);
           }
         }
       }
     }
     
     // Send all data to the server in a single request
-    const response = await fetch('/api/replit-db/migrate', {
+    const response = await fetch('/api/replit-db/save-all', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ data: dataToMigrate }),
+      body: JSON.stringify({ data: dataToSave }),
     });
     
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to migrate data');
+      throw new Error(errorData.message || 'Failed to save data');
     }
     
-    console.log('Migration from localStorage to Replit DB completed successfully');
+    console.log('Saving from localStorage to Replit DB completed successfully');
   } catch (error) {
-    console.error('Error during migration from localStorage to Replit DB:', error);
+    console.error('Error during save from localStorage to Replit DB:', error);
     throw error; // Re-throw to allow caller to handle
   }
 };

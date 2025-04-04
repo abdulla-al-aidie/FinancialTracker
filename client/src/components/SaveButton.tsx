@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Save, Check, AlertCircle, Cloud } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getLastSaveTime, migrateFromLocalStorage } from "@/utils/database";
+import { getLastSaveTime, saveFromLocalStorage } from "@/utils/database";
 
 export default function SaveButton() {
   const [isSaving, setIsSaving] = useState(false);
@@ -54,16 +54,16 @@ export default function SaveButton() {
     return () => clearInterval(interval);
   }, []);
   
-  const migrateDataToDb = async () => {
+  const saveDataToDb = async () => {
     setIsSaving(true);
     
     try {
-      await migrateFromLocalStorage();
+      await saveFromLocalStorage();
       setHasMigrated(true);
       
       toast({
-        title: "Migration Complete",
-        description: "Your data has been migrated from browser storage to Replit Database for improved persistence.",
+        title: "Save Complete",
+        description: "Your data has been saved to Replit's database for improved persistence.",
         variant: "default"
       });
       
@@ -74,10 +74,10 @@ export default function SaveButton() {
         setAutoSaved(true);
       }
     } catch (error) {
-      console.error("Error during migration:", error);
+      console.error("Error during save:", error);
       toast({
-        title: "Migration Failed",
-        description: "There was an error migrating your data. Your data is still safely stored in browser storage.",
+        title: "Save Failed",
+        description: "There was an error saving your data. Your data is still safely stored in your browser.",
         variant: "destructive" 
       });
     } finally {
@@ -109,28 +109,28 @@ export default function SaveButton() {
           <Button 
             className="w-full"
             variant={autoSaved ? "outline" : "default"}
-            onClick={migrateDataToDb}
+            onClick={saveDataToDb}
             disabled={isSaving || hasMigrated}
           >
             {isSaving ? (
               <>
                 <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
-                Migrating to Database...
+                Saving...
               </>
             ) : hasMigrated ? (
               <>
                 <Cloud className="mr-2 h-4 w-4 text-green-500" />
-                Cloud Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
+                Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
               </>
             ) : autoSaved ? (
               <>
                 <Check className="mr-2 h-4 w-4 text-green-500" />
-                Click to Migrate to Database
+                Save
               </>
             ) : (
               <>
                 <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
-                Migrate to Database
+                Save
               </>
             )}
           </Button>
@@ -138,8 +138,8 @@ export default function SaveButton() {
         <TooltipContent>
           <p className="w-[250px] text-sm">
             {hasMigrated 
-              ? "Your data is now safely stored in Replit's persistent database. Changes are automatically saved."
-              : "Click to migrate your data from browser storage to Replit's persistent database for improved reliability."
+              ? "Your data is now safely stored in Replit's database. Changes are automatically saved."
+              : "Click to save your data to Replit's database for improved reliability across sessions."
             }
             {lastSaved && ` Last saved: ${getTimeAgo(lastSaved)}`}
           </p>

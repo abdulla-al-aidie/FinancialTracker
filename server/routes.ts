@@ -1417,15 +1417,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Endpoint to migrate data from localStorage (called by client)
-  app.post("/api/replit-db/migrate", async (req, res) => {
+  // Endpoint to save data from localStorage (called by client)
+  app.post("/api/replit-db/save-all", async (req, res) => {
     try {
       const { data } = req.body;
       
       if (!data || Object.keys(data).length === 0) {
         return res.status(400).json({
           error: "Invalid request",
-          message: "No data provided for migration"
+          message: "No data provided for saving"
         });
       }
       
@@ -1440,12 +1440,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({
         success: true,
-        message: "Data migrated successfully"
+        message: "Data saved successfully"
       });
     } catch (error) {
-      console.error(`Error migrating data to Replit DB:`, error);
+      console.error(`Error saving data to Replit DB:`, error);
       res.status(500).json({
-        error: "Failed to migrate data",
+        error: "Failed to save data",
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
     }
