@@ -35,6 +35,7 @@ import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import MonthSelector from "@/components/MonthSelector";
+import SampleDataLoader from "@/components/SampleDataLoader";
 
 export default function Dashboard() {
   const { 
@@ -887,6 +888,16 @@ export default function Dashboard() {
                       <Button variant="outline" className="w-full">Email Settings</Button>
                       <Button variant="outline" className="w-full">Alert Preferences</Button>
                     </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Data Management</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <SampleDataLoader />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Load sample financial data for January through April to test the application
+                    </p>
                   </div>
                 </div>
               </CardContent>
