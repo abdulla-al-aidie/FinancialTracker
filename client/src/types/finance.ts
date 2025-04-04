@@ -42,6 +42,7 @@ export interface Expense {
   date: string;
   category: ExpenseCategory;
   description?: string;
+  associatedDebtId?: number; // Link to a debt when this expense is a debt payment
 }
 
 // Budget for categories

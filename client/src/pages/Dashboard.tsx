@@ -592,11 +592,29 @@ export default function Dashboard() {
                           onClick={() => handleExpenseClick(expense)}
                         >
                           <div className="flex items-center space-x-3">
-                            <div className="p-2 rounded-full bg-red-100">
-                              <ShoppingBag className="h-4 w-4 text-red-500" />
+                            <div className={`p-2 rounded-full ${
+                              expense.category === ExpenseCategory.DebtPayments 
+                                ? 'bg-blue-100' 
+                                : 'bg-red-100'
+                            }`}>
+                              {expense.category === ExpenseCategory.DebtPayments ? (
+                                <CreditCard className="h-4 w-4 text-blue-500" />
+                              ) : (
+                                <ShoppingBag className="h-4 w-4 text-red-500" />
+                              )}
                             </div>
                             <div>
-                              <p className="text-sm font-medium">{expense.description}</p>
+                              <div className="flex items-center">
+                                <p className="text-sm font-medium">{expense.description}</p>
+                                {expense.associatedDebtId && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    {(() => {
+                                      const associatedDebt = debts.find(d => d.id === expense.associatedDebtId);
+                                      return associatedDebt ? `${associatedDebt.name} Payment` : 'Debt Payment';
+                                    })()}
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
                             </div>
                           </div>

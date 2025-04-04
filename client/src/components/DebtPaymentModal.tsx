@@ -75,12 +75,13 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Update the debt
     updateDebt(updatedDebt);
     
-    // Create an expense entry for the payment
+    // Create an expense entry for the payment with associatedDebtId
     addExpense({
       amount: paymentAmount,
       date: paymentDate,
       category: ExpenseCategory.DebtPayments,
       description: `Payment for ${debt.name}`,
+      associatedDebtId: debt.id
     });
     
     // If there's a related goal and user wants to apply payment to goal

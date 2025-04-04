@@ -103,10 +103,23 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           expenseData.description = `Payment towards ${debtToUpdate.name}`;
         }
         
-        // Update the debt with reduced balance
+        // Extract month ID (YYYY-MM) from payment date for monthly tracking
+        const paymentDate = format(values.date, "yyyy-MM-dd");
+        const paymentMonthId = paymentDate.substring(0, 7);
+        
+        // Initialize or update the monthly payments record
+        const currentMonthlyPayments = debtToUpdate.monthlyPayments || {};
+        const updatedMonthlyPayments = {
+          ...currentMonthlyPayments,
+          [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + values.amount
+        };
+        
+        // Update the debt with reduced balance and tracked payment
         const updatedDebt = {
           ...debtToUpdate,
-          balance: Math.max(0, debtToUpdate.balance - values.amount)
+          balance: Math.max(0, debtToUpdate.balance - values.amount),
+          totalPaid: (debtToUpdate.totalPaid || 0) + values.amount,
+          monthlyPayments: updatedMonthlyPayments
         };
         
         // Update the debt
@@ -115,6 +128,45 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
     }
 
     if (isEditMode && expense) {
+      // If editing an existing expense, we need to handle debt payments appropriately
+      if (expense.category === ExpenseCategory.DebtPayments && 
+          (expense as any).associatedDebtId && 
+          (values.category !== ExpenseCategory.DebtPayments || 
+           values.associatedDebtId !== (expense as any).associatedDebtId ||
+           values.amount !== expense.amount)) {
+            
+        // We're changing a debt payment - need to reverse the old payment first
+        const oldDebtId = (expense as any).associatedDebtId;
+        const debtToReverse = debts.find(debt => debt.id === oldDebtId);
+        
+        if (debtToReverse) {
+          // Reverse the payment on the old debt
+          const updatedDebt = {
+            ...debtToReverse,
+            balance: debtToReverse.balance + expense.amount,
+            totalPaid: Math.max(0, debtToReverse.totalPaid - expense.amount)
+          };
+          
+          // Update monthly payment tracking if possible
+          if (debtToReverse.monthlyPayments) {
+            const paymentMonthId = expense.date.substring(0, 7);
+            const currentMonthlyPayments = { ...debtToReverse.monthlyPayments };
+            
+            if (currentMonthlyPayments[paymentMonthId]) {
+              currentMonthlyPayments[paymentMonthId] = Math.max(
+                0, 
+                currentMonthlyPayments[paymentMonthId] - expense.amount
+              );
+            }
+            
+            updatedDebt.monthlyPayments = currentMonthlyPayments;
+          }
+          
+          // Update the debt with reversed payment
+          updateDebt(updatedDebt);
+        }
+      }
+      
       updateExpense({
         ...expense,
         ...expenseData,
@@ -130,6 +182,40 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
   // Handle expense deletion
   const handleDelete = () => {
     if (expense) {
+      // If this was a debt payment, we need to update the debt record
+      if (expense.category === ExpenseCategory.DebtPayments && (expense as any).associatedDebtId) {
+        const debtId = (expense as any).associatedDebtId;
+        const debtToUpdate = debts.find(debt => debt.id === debtId);
+        
+        if (debtToUpdate) {
+          // Reverse the payment impact on the debt
+          const updatedDebt = {
+            ...debtToUpdate,
+            balance: debtToUpdate.balance + expense.amount,
+            totalPaid: Math.max(0, debtToUpdate.totalPaid - expense.amount)
+          };
+          
+          // Update monthly payment tracking if possible
+          if (debtToUpdate.monthlyPayments) {
+            const paymentMonthId = expense.date.substring(0, 7);
+            const currentMonthlyPayments = { ...debtToUpdate.monthlyPayments };
+            
+            if (currentMonthlyPayments[paymentMonthId]) {
+              currentMonthlyPayments[paymentMonthId] = Math.max(
+                0, 
+                currentMonthlyPayments[paymentMonthId] - expense.amount
+              );
+            }
+            
+            updatedDebt.monthlyPayments = currentMonthlyPayments;
+          }
+          
+          // Update the debt with reversed payment
+          updateDebt(updatedDebt);
+        }
+      }
+      
+      // Delete the expense
       deleteExpense(expense.id);
       setShowDeleteConfirm(false);
       onClose();
