@@ -724,12 +724,28 @@ export default function Dashboard() {
                               className="h-1.5" 
                             />
                             
-                            {/* Show month-specific payment information if available */}
-                            {debt.monthlyPayments && debt.monthlyPayments[activeMonth] !== undefined && (
-                              <div className="text-xs text-right mt-1 text-gray-500">
-                                Paid this month: {formatCurrency(debt.monthlyPayments[activeMonth])}
+                            {/* Payment summary - show both total and monthly */}
+                            <div className="flex justify-between text-xs mt-1.5">
+                              <div className="text-gray-500">
+                                <span className="font-medium text-emerald-600">
+                                  {formatCurrency((() => {
+                                    const monthlyPayments = debt.monthlyPayments || {};
+                                    return Object.values(monthlyPayments).reduce(
+                                      (sum, amount) => sum + amount, 0
+                                    );
+                                  })())}
+                                </span>
+                                <span className="ml-1">total repaid</span>
                               </div>
-                            )}
+                              
+                              {/* Show month-specific payment information if available */}
+                              {debt.monthlyPayments && debt.monthlyPayments[activeMonth] !== undefined && (
+                                <div className="text-gray-500">
+                                  <span>{formatCurrency(debt.monthlyPayments[activeMonth])}</span>
+                                  <span className="ml-1">this month</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="mt-3 grid grid-cols-2 gap-4">
@@ -844,16 +860,18 @@ export default function Dashboard() {
                                   (sum, amount) => sum + amount, 0
                                 );
                                 return (
-                                  <p className="text-sm font-medium">
-                                    {formatCurrency(totalProgress)} total saved
+                                  <p className="text-sm font-bold text-emerald-600">
+                                    {formatCurrency(totalProgress)}
+                                    <span className="text-xs font-normal text-gray-500 ml-1">total progress</span>
                                   </p>
                                 );
                               })()}
                               
                               {/* Show month-specific progress if available */}
                               {goal.monthlyProgress && goal.monthlyProgress[activeMonth] !== undefined && (
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {formatCurrency(goal.monthlyProgress[activeMonth])} this month
+                                <p className="text-xs mt-1">
+                                  <span className="font-medium">{formatCurrency(goal.monthlyProgress[activeMonth])}</span>
+                                  <span className="text-gray-500 ml-1">contributed this month</span>
                                 </p>
                               )}
                             </div>

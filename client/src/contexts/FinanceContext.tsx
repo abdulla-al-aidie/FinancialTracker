@@ -1529,7 +1529,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const targetGoals = allGoals[targetMonthId] || [];
     
     // Calculate current total progress for each goal from the source month
-    const goalProgress = {};
+    const goalProgress: Record<number, number> = {};
     sourceGoals.forEach(goal => {
       // Sum up all monthly progress for this goal
       let totalProgress = 0;
