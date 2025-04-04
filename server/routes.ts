@@ -544,6 +544,444 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // All data is stored in client-side localStorage
   
+  // Database API endpoints
+  
+  // User profile endpoints
+  app.get("/api/user-profile/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const profile = await storage.getUserProfile(userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      res.json(profile);
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      res.status(500).json({ error: "Failed to fetch user profile" });
+    }
+  });
+
+  app.post("/api/user-profile", async (req, res) => {
+    try {
+      const profile = req.body;
+      const createdProfile = await storage.createUserProfile(profile);
+      res.status(201).json(createdProfile);
+    } catch (error) {
+      console.error("Error creating user profile:", error);
+      res.status(500).json({ error: "Failed to create user profile" });
+    }
+  });
+
+  app.put("/api/user-profile/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const profile = req.body;
+      const updatedProfile = await storage.updateUserProfile(userId, profile);
+      res.json(updatedProfile);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(500).json({ error: "Failed to update user profile" });
+    }
+  });
+
+  // Month management endpoints
+  app.get("/api/months/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const months = await storage.getMonths(userId);
+      res.json(months);
+    } catch (error) {
+      console.error("Error fetching months:", error);
+      res.status(500).json({ error: "Failed to fetch months" });
+    }
+  });
+
+  app.post("/api/months", async (req, res) => {
+    try {
+      const month = req.body;
+      const createdMonth = await storage.createMonth(month);
+      res.status(201).json(createdMonth);
+    } catch (error) {
+      console.error("Error creating month:", error);
+      res.status(500).json({ error: "Failed to create month" });
+    }
+  });
+
+  app.put("/api/months/:userId/active/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      await storage.setActiveMonth(userId, monthId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error setting active month:", error);
+      res.status(500).json({ error: "Failed to set active month" });
+    }
+  });
+
+  // Income endpoints
+  app.get("/api/incomes/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const incomes = await storage.getIncomes(userId, monthId);
+      res.json(incomes);
+    } catch (error) {
+      console.error("Error fetching incomes:", error);
+      res.status(500).json({ error: "Failed to fetch incomes" });
+    }
+  });
+
+  app.post("/api/incomes", async (req, res) => {
+    try {
+      const income = req.body;
+      const createdIncome = await storage.createIncome(income);
+      res.status(201).json(createdIncome);
+    } catch (error) {
+      console.error("Error creating income:", error);
+      res.status(500).json({ error: "Failed to create income" });
+    }
+  });
+
+  app.put("/api/incomes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const income = req.body;
+      const updatedIncome = await storage.updateIncome(id, income);
+      res.json(updatedIncome);
+    } catch (error) {
+      console.error("Error updating income:", error);
+      res.status(500).json({ error: "Failed to update income" });
+    }
+  });
+
+  app.delete("/api/incomes/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteIncome(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting income:", error);
+      res.status(500).json({ error: "Failed to delete income" });
+    }
+  });
+
+  // Expense endpoints
+  app.get("/api/expenses/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const expenses = await storage.getExpenses(userId, monthId);
+      res.json(expenses);
+    } catch (error) {
+      console.error("Error fetching expenses:", error);
+      res.status(500).json({ error: "Failed to fetch expenses" });
+    }
+  });
+
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const expense = req.body;
+      const createdExpense = await storage.createExpense(expense);
+      res.status(201).json(createdExpense);
+    } catch (error) {
+      console.error("Error creating expense:", error);
+      res.status(500).json({ error: "Failed to create expense" });
+    }
+  });
+
+  app.put("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const expense = req.body;
+      const updatedExpense = await storage.updateExpense(id, expense);
+      res.json(updatedExpense);
+    } catch (error) {
+      console.error("Error updating expense:", error);
+      res.status(500).json({ error: "Failed to update expense" });
+    }
+  });
+
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteExpense(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting expense:", error);
+      res.status(500).json({ error: "Failed to delete expense" });
+    }
+  });
+
+  // Budget endpoints
+  app.get("/api/budgets/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const budgets = await storage.getBudgets(userId, monthId);
+      res.json(budgets);
+    } catch (error) {
+      console.error("Error fetching budgets:", error);
+      res.status(500).json({ error: "Failed to fetch budgets" });
+    }
+  });
+
+  app.post("/api/budgets", async (req, res) => {
+    try {
+      const budget = req.body;
+      const createdBudget = await storage.createBudget(budget);
+      res.status(201).json(createdBudget);
+    } catch (error) {
+      console.error("Error creating budget:", error);
+      res.status(500).json({ error: "Failed to create budget" });
+    }
+  });
+
+  app.put("/api/budgets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const budget = req.body;
+      const updatedBudget = await storage.updateBudget(id, budget);
+      res.json(updatedBudget);
+    } catch (error) {
+      console.error("Error updating budget:", error);
+      res.status(500).json({ error: "Failed to update budget" });
+    }
+  });
+
+  app.delete("/api/budgets/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteBudget(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting budget:", error);
+      res.status(500).json({ error: "Failed to delete budget" });
+    }
+  });
+
+  // Goal endpoints
+  app.get("/api/goals/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const goals = await storage.getGoals(userId, monthId);
+      res.json(goals);
+    } catch (error) {
+      console.error("Error fetching goals:", error);
+      res.status(500).json({ error: "Failed to fetch goals" });
+    }
+  });
+
+  app.post("/api/goals", async (req, res) => {
+    try {
+      const goal = req.body;
+      const createdGoal = await storage.createGoal(goal);
+      res.status(201).json(createdGoal);
+    } catch (error) {
+      console.error("Error creating goal:", error);
+      res.status(500).json({ error: "Failed to create goal" });
+    }
+  });
+
+  app.put("/api/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const goal = req.body;
+      const updatedGoal = await storage.updateGoal(id, goal);
+      res.json(updatedGoal);
+    } catch (error) {
+      console.error("Error updating goal:", error);
+      res.status(500).json({ error: "Failed to update goal" });
+    }
+  });
+
+  app.delete("/api/goals/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteGoal(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting goal:", error);
+      res.status(500).json({ error: "Failed to delete goal" });
+    }
+  });
+
+  // Debt endpoints
+  app.get("/api/debts/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const debts = await storage.getDebts(userId, monthId);
+      res.json(debts);
+    } catch (error) {
+      console.error("Error fetching debts:", error);
+      res.status(500).json({ error: "Failed to fetch debts" });
+    }
+  });
+
+  app.post("/api/debts", async (req, res) => {
+    try {
+      const debt = req.body;
+      const createdDebt = await storage.createDebt(debt);
+      res.status(201).json(createdDebt);
+    } catch (error) {
+      console.error("Error creating debt:", error);
+      res.status(500).json({ error: "Failed to create debt" });
+    }
+  });
+
+  app.put("/api/debts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const debt = req.body;
+      const updatedDebt = await storage.updateDebt(id, debt);
+      res.json(updatedDebt);
+    } catch (error) {
+      console.error("Error updating debt:", error);
+      res.status(500).json({ error: "Failed to update debt" });
+    }
+  });
+
+  app.delete("/api/debts/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteDebt(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting debt:", error);
+      res.status(500).json({ error: "Failed to delete debt" });
+    }
+  });
+
+  // Recommendations endpoints
+  app.get("/api/recommendations/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const recommendations = await storage.getRecommendations(userId, monthId);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error fetching recommendations:", error);
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post("/api/recommendations", async (req, res) => {
+    try {
+      const recommendation = req.body;
+      const createdRecommendation = await storage.createRecommendation(recommendation);
+      res.status(201).json(createdRecommendation);
+    } catch (error) {
+      console.error("Error creating recommendation:", error);
+      res.status(500).json({ error: "Failed to create recommendation" });
+    }
+  });
+
+  app.put("/api/recommendations/:id/read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.markRecommendationAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking recommendation as read:", error);
+      res.status(500).json({ error: "Failed to mark recommendation as read" });
+    }
+  });
+
+  // Alert endpoints
+  app.get("/api/alerts/:userId/:monthId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      const alerts = await storage.getAlerts(userId, monthId);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ error: "Failed to fetch alerts" });
+    }
+  });
+
+  app.post("/api/alerts", async (req, res) => {
+    try {
+      const alert = req.body;
+      const createdAlert = await storage.createAlert(alert);
+      res.status(201).json(createdAlert);
+    } catch (error) {
+      console.error("Error creating alert:", error);
+      res.status(500).json({ error: "Failed to create alert" });
+    }
+  });
+
+  app.put("/api/alerts/:id/read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.markAlertAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error marking alert as read:", error);
+      res.status(500).json({ error: "Failed to mark alert as read" });
+    }
+  });
+
+  app.put("/api/alerts/:userId/:monthId/clear", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const monthId = req.params.monthId;
+      await storage.clearAllAlerts(userId, monthId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error clearing alerts:", error);
+      res.status(500).json({ error: "Failed to clear alerts" });
+    }
+  });
+
+  // Scenario endpoints
+  app.get("/api/scenarios/:userId", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const scenarios = await storage.getScenarios(userId);
+      res.json(scenarios);
+    } catch (error) {
+      console.error("Error fetching scenarios:", error);
+      res.status(500).json({ error: "Failed to fetch scenarios" });
+    }
+  });
+
+  app.post("/api/scenarios", async (req, res) => {
+    try {
+      const scenario = req.body;
+      const createdScenario = await storage.createScenario(scenario);
+      res.status(201).json(createdScenario);
+    } catch (error) {
+      console.error("Error creating scenario:", error);
+      res.status(500).json({ error: "Failed to create scenario" });
+    }
+  });
+
+  app.put("/api/scenarios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const scenario = req.body;
+      const updatedScenario = await storage.updateScenario(id, scenario);
+      res.json(updatedScenario);
+    } catch (error) {
+      console.error("Error updating scenario:", error);
+      res.status(500).json({ error: "Failed to update scenario" });
+    }
+  });
+
+  app.delete("/api/scenarios/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteScenario(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting scenario:", error);
+      res.status(500).json({ error: "Failed to delete scenario" });
+    }
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;
