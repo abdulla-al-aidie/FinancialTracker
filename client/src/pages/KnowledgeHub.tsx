@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Search, BookOpen, Sparkles, GraduationCap, Clock } from "lucide-react";
+import { Loader2, Search, BookOpen, Sparkles, GraduationCap, Clock, ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
@@ -73,10 +73,21 @@ export default function KnowledgeHub() {
     <div className="container mx-auto py-6 space-y-8">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center">
-            <BookOpen className="mr-2 h-8 w-8" />
-            Knowledge Hub
-          </h1>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => window.location.href = "/"}
+              className="rounded-full h-8 w-8 hover:bg-primary/10"
+              aria-label="Back to dashboard"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center">
+              <BookOpen className="mr-2 h-8 w-8" />
+              Knowledge Hub
+            </h1>
+          </div>
           <p className="text-muted-foreground mt-1">
             Ask questions about personal finance and get expert answers
           </p>
