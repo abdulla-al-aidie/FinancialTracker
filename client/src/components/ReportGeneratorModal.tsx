@@ -41,8 +41,28 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { ExpenseCategory } from "@/types/finance";
 import jsPDF from "jspdf";
 import 'jspdf-autotable';
-import Chart from 'chart.js/auto';
+// Import Chart.js with proper typings
+import { Chart, ChartConfiguration } from 'chart.js/auto';
 import { createCanvas } from 'canvas';
+
+// Add compatible canvas/context types for Chart.js
+declare module 'chart.js' {
+  interface ChartTypeRegistry {
+    // Ensure bar/pie types are properly defined
+    bar: {
+      chartOptions: any;
+      datasetOptions: any;
+      defaultDataPoint: number;
+      scales: any;
+    };
+    pie: {
+      chartOptions: any;
+      datasetOptions: any;
+      defaultDataPoint: number;
+      scales: any;
+    };
+  }
+}
 
 const reportFormSchema = z.object({
   month: z.date(),
@@ -83,7 +103,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     resolver: zodResolver(reportFormSchema),
     defaultValues: {
       month: new Date(),
-      reportType: "detailed",
+      reportType: "analysis",
       includeIncome: true,
       includeExpenses: true,
       includeBudgets: true,
@@ -108,6 +128,11 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     const canvas = createCanvas(400, 300);
     const ctx = canvas.getContext('2d');
     
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return '';
+    }
+    
     // Prepare data for the chart
     const expensesByCategory = Object.values(ExpenseCategory).map(category => {
       const totalForCategory = expenses
@@ -127,7 +152,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     ];
     
     // Create the chart
-    new Chart(ctx, {
+    new Chart(canvas, {
       type: 'pie',
       data: {
         labels: expensesByCategory.map(item => item.category),
@@ -170,6 +195,11 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     const canvas = createCanvas(400, 300);
     const ctx = canvas.getContext('2d');
     
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return '';
+    }
+    
     // Prepare data for the chart
     const budgetData = budgets.map(budget => ({
       category: budget.category,
@@ -179,7 +209,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     })).sort((a, b) => b.percentage - a.percentage).slice(0, 6); // Top 6 budgets
     
     // Create the chart
-    new Chart(ctx, {
+    new Chart(canvas, {
       type: 'bar',
       data: {
         labels: budgetData.map(item => item.category),
@@ -236,6 +266,11 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     const canvas = createCanvas(400, 300);
     const ctx = canvas.getContext('2d');
     
+    if (!ctx) {
+      console.error('Could not get canvas context');
+      return '';
+    }
+    
     // Prepare data - get top 5 goals
     const goalData = goals
       .filter(goal => goal.targetAmount > 0)
@@ -249,7 +284,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
       .slice(0, 5);
     
     // Create the chart
-    new Chart(ctx, {
+    new Chart(canvas, {
       type: 'bar',
       data: {
         labels: goalData.map(item => item.name),
@@ -303,18 +338,18 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     const doc = new jsPDF();
     const reportMonth = format(form.getValues("month"), "MMMM yyyy");
     const reportType = form.getValues("reportType");
-    const fileName = `finance-report-${format(new Date(), 'MMM-yyyy')}.pdf`;
+    const fileName = `financial-analysis-${format(new Date(), 'MMM-yyyy')}.pdf`;
     
     // Add title
     doc.setFontSize(20);
     doc.setTextColor(0, 0, 128);
-    doc.text("Monthly Financial Report", 105, 20, { align: "center" });
+    doc.text("Financial Analysis Report", 105, 20, { align: "center" });
     
     // Add period
     doc.setFontSize(14);
     doc.setTextColor(70, 70, 70);
     doc.text(`Report Period: ${reportMonth}`, 105, 30, { align: "center" });
-    doc.text(`Report Type: ${reportType.charAt(0).toUpperCase() + reportType.slice(1)}`, 105, 38, { align: "center" });
+    doc.text("Includes AI-powered financial insights", 105, 38, { align: "center" });
     
     // Add date generated
     doc.setFontSize(10);
@@ -559,7 +594,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
         
         recommendations.slice(0, 3).forEach(rec => {
           doc.setFontSize(12);
-          doc.text(`• ${rec.message}`, 30, yPosition);
+          doc.text(`• ${rec.description}`, 30, yPosition);
           yPosition += 8;
         });
       } else {
@@ -600,9 +635,9 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Generate Monthly Finance Report</DialogTitle>
+          <DialogTitle>Generate Financial Analysis Report</DialogTitle>
           <DialogDescription>
-            Create a comprehensive report of your financial activity
+            Create a detailed analysis report with personalized insights
           </DialogDescription>
         </DialogHeader>
         
@@ -649,31 +684,8 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
                 )}
               />
               
-              <FormField
-                control={form.control}
-                name="reportType"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Report Type</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select report type" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="summary">Summary Report</SelectItem>
-                        <SelectItem value="detailed">Detailed Report</SelectItem>
-                        <SelectItem value="analysis">Analysis Report with Insights</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Report type is fixed to "analysis" */}
+              <input type="hidden" name="reportType" value="analysis" />
               
               <div className="space-y-2">
                 <FormLabel>Include Sections</FormLabel>
@@ -763,7 +775,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
                 <Button type="submit" disabled={isGenerating}>
-                  {isGenerating ? "Generating..." : "Generate Report"}
+                  {isGenerating ? "Analyzing..." : "Generate Analysis Report"}
                 </Button>
               </DialogFooter>
             </form>
@@ -774,14 +786,14 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                 <FileText className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold">Report Ready</h3>
+              <h3 className="text-lg font-semibold">Analysis Ready</h3>
               <p className="text-sm text-gray-500 text-center mt-1">
-                Your monthly finance report has been generated successfully
+                Your financial analysis report has been generated successfully
               </p>
             </div>
             
             <div className="border rounded-md p-4 bg-gray-50">
-              <h4 className="font-medium text-sm mb-2">Report Summary</h4>
+              <h4 className="font-medium text-sm mb-2">Analysis Summary</h4>
               <ul className="space-y-1 text-sm">
                 <li className="flex justify-between">
                   <span className="text-gray-600">Period:</span>
@@ -815,7 +827,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
                 className="gap-2"
               >
                 <Download className="h-4 w-4" />
-                Download Report
+                Download Analysis
               </Button>
             </DialogFooter>
           </div>
