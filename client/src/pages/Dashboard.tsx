@@ -17,7 +17,8 @@ import {
   Landmark,
   CalendarDays,
   PlusCircle,
-  FileText
+  FileText,
+  Trash2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -63,7 +64,8 @@ export default function Dashboard() {
     goals,
     debts,
     recommendations,
-    alerts
+    alerts,
+    deleteDebt
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("overview");
@@ -194,6 +196,14 @@ export default function Dashboard() {
   // Handler for change currency
   const handleChangeCurrency = () => {
     setCurrencyModalOpen(true);
+  };
+  
+  // Handler for debt deletion
+  const handleDeleteDebt = (e: React.MouseEvent, id: number) => {
+    e.stopPropagation(); // Prevent parent click event (edit debt)
+    if (window.confirm("Are you sure you want to delete this debt? This action cannot be undone.")) {
+      deleteDebt(id);
+    }
   };
   
   return (
@@ -667,7 +677,16 @@ export default function Dashboard() {
                               <p className="text-sm font-medium">{formatCurrency(debt.minimumPayment)}</p>
                             </div>
                           </div>
-                          <div className="mt-3 border-t pt-3 flex justify-end">
+                          <div className="mt-3 border-t pt-3 flex justify-between">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="gap-1"
+                              onClick={(e) => handleDeleteDebt(e, debt.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              <span>Delete</span>
+                            </Button>
                             <Button
                               variant="secondary"
                               size="sm"
