@@ -708,23 +708,7 @@ export default function Dashboard() {
                               className="h-1.5" 
                             />
                             
-                            {/* Show current month's payment progress */}
-                            {activeMonth && (
-                              <div className="mt-2">
-                                <div className="flex justify-between items-center mb-1">
-                                  <span className="text-xs text-gray-500">Current Month Payment</span>
-                                  <span className="text-xs font-medium">
-                                    {formatCurrency((debt.monthlyPayments && debt.monthlyPayments[activeMonth]) || 0)}
-                                  </span>
-                                </div>
-                                <Progress 
-                                  value={debt.minimumPayment > 0 && debt.monthlyPayments && debt.monthlyPayments[activeMonth] 
-                                    ? Math.min(100, Math.round((debt.monthlyPayments[activeMonth] / debt.minimumPayment) * 100))
-                                    : 0} 
-                                  className="h-1.5 bg-blue-100" 
-                                />
-                              </div>
-                            )}
+
                           </div>
                           
                           <div className="mt-3 grid grid-cols-2 gap-4">

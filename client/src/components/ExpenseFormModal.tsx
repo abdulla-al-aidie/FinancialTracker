@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 import { CalendarIcon, Trash2 } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Expense, ExpenseCategory, Debt } from "@/types/finance";
+import { Expense, ExpenseCategory, Debt, GoalType } from "@/types/finance";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -43,7 +43,7 @@ interface ExpenseFormModalProps {
 }
 
 export default function ExpenseFormModal({ open, onClose, expense }: ExpenseFormModalProps) {
-  const { addExpense, updateExpense, deleteExpense, categorizeExpense, debts, updateDebt } = useFinance();
+  const { addExpense, updateExpense, deleteExpense, categorizeExpense, debts, updateDebt, goals, updateGoal } = useFinance();
   const isEditMode = !!expense;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
@@ -124,6 +124,19 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
         
         // Update the debt
         updateDebt(updatedDebt);
+        
+        // Find related debt payoff goal if any
+        const relatedGoal = goals.find(
+          goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToUpdate.name)
+        );
+        
+        // If there's a related goal, update its progress
+        if (relatedGoal) {
+          updateGoal({
+            ...relatedGoal,
+            currentAmount: Math.min(relatedGoal.targetAmount, relatedGoal.currentAmount + values.amount),
+          });
+        }
       }
     }
 
@@ -164,6 +177,19 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // Update the debt with reversed payment
           updateDebt(updatedDebt);
+          
+          // Find related debt payoff goal if any
+          const relatedGoal = goals.find(
+            goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToReverse.name)
+          );
+          
+          // If there's a related goal, update its progress by removing the amount
+          if (relatedGoal) {
+            updateGoal({
+              ...relatedGoal,
+              currentAmount: Math.max(0, relatedGoal.currentAmount - expense.amount),
+            });
+          }
         }
       }
       
@@ -212,6 +238,19 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // Update the debt with reversed payment
           updateDebt(updatedDebt);
+          
+          // Find related debt payoff goal if any
+          const relatedGoal = goals.find(
+            goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToUpdate.name)
+          );
+          
+          // If there's a related goal, update its progress by removing the amount
+          if (relatedGoal) {
+            updateGoal({
+              ...relatedGoal,
+              currentAmount: Math.max(0, relatedGoal.currentAmount - expense.amount),
+            });
+          }
         }
       }
       
