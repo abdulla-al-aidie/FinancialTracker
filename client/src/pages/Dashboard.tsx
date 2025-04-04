@@ -55,6 +55,7 @@ import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
+import BudgetTemplate from "@/components/BudgetTemplate";
 
 export default function Dashboard() {
   const { 
@@ -759,6 +760,10 @@ export default function Dashboard() {
           
           {/* Budgets Tab */}
           <TabsContent value="budgets" className="space-y-4">
+            {/* Budget Template with Pie Charts */}
+            <BudgetTemplate />
+            
+            {/* Existing Budget Tracker */}
             <Card>
               <CardHeader>
                 <CardTitle>Budget Tracker</CardTitle>
