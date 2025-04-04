@@ -68,13 +68,13 @@ export default function Dashboard() {
     totalExpenses, 
     netCashflow,
     savingsRate, 
-    incomes,
-    expenses,
-    budgets,
-    goals,
-    debts,
-    recommendations,
-    alerts,
+    incomes = [],
+    expenses = [],
+    budgets = [],
+    goals = [],
+    debts = [],
+    recommendations = [],
+    alerts = [],
     deleteDebt,
     activeMonth
   } = useFinance();
@@ -117,9 +117,14 @@ export default function Dashboard() {
   
   // Prepare expense data for pie chart
   const expensesByCategory = Object.values(ExpenseCategory).map(category => {
-    const totalForCategory = expenses
-      .filter(expense => expense.category === category)
-      .reduce((total, expense) => total + expense.amount, 0);
+    // Make sure expenses is an array before using filter
+    const categoryExpenses = Array.isArray(expenses) 
+      ? expenses.filter(expense => expense.category === category)
+      : [];
+      
+    const totalForCategory = categoryExpenses.reduce(
+      (total, expense) => total + expense.amount, 0
+    );
     
     return {
       name: category,
@@ -128,14 +133,18 @@ export default function Dashboard() {
   }).filter(item => item.value > 0);
   
   // Get recommendations with unread first
-  const sortedRecommendations = [...recommendations].sort((a, b) => {
-    if (a.isRead && !b.isRead) return 1;
-    if (!a.isRead && b.isRead) return -1;
-    return new Date(b.dateGenerated).getTime() - new Date(a.dateGenerated).getTime();
-  });
+  const sortedRecommendations = Array.isArray(recommendations)
+    ? [...recommendations].sort((a, b) => {
+        if (a.isRead && !b.isRead) return 1;
+        if (!a.isRead && b.isRead) return -1;
+        return new Date(b.dateGenerated).getTime() - new Date(a.dateGenerated).getTime();
+      })
+    : [];
   
   // Get unread alerts
-  const unreadAlerts = alerts.filter(alert => !alert.isRead);
+  const unreadAlerts = Array.isArray(alerts) 
+    ? alerts.filter(alert => !alert.isRead) 
+    : [];
   
   // Get active month data for the chart
   const { months } = useFinance();
@@ -150,13 +159,15 @@ export default function Dashboard() {
     }
   ];
   
-  // Mock budget utilization data (replace with actual data later)
-  const budgetData = budgets.map(budget => ({
-    category: budget.category,
-    limit: budget.limit,
-    spent: budget.spent,
-    percent: budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0
-  })).sort((a, b) => b.percent - a.percent);
+  // Budget utilization data
+  const budgetData = Array.isArray(budgets)
+    ? budgets.map(budget => ({
+        category: budget.category,
+        limit: budget.limit,
+        spent: budget.spent,
+        percent: budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0
+      })).sort((a, b) => b.percent - a.percent)
+    : [];
 
 
   
@@ -561,94 +572,203 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
               
-              {/* Recent Transactions */}
+              {/* Transactions Tabs */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Recent Transactions</CardTitle>
-                  <CardDescription>View and manage your recent transactions</CardDescription>
+                  <CardTitle>Transactions</CardTitle>
+                  <CardDescription>View and manage your transactions</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex flex-col gap-4">
-                    <Input placeholder="Search transactions..." />
+                <CardContent>
+                  <Tabs defaultValue="all" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 mb-4">
+                      <TabsTrigger value="all">All</TabsTrigger>
+                      <TabsTrigger value="income">Income</TabsTrigger>
+                      <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                    </TabsList>
                     
-                    <div className="flex gap-2">
-                      <Select>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="All Types" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="income">Income</SelectItem>
-                          <SelectItem value="expense">Expense</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Select>
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="All Categories" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Categories</SelectItem>
-                          {Object.values(ExpenseCategory).map((category) => (
-                            <SelectItem key={category} value={category}>
-                              {category}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  
-                  {/* Combined transactions - shows both expenses and income */}
-                  {expenses.length > 0 || incomes.length > 0 ? (
-                    <div className="space-y-4 mt-4">
-                      {/* Show expenses */}
-                      {expenses.map((expense) => (
-                        <div 
-                          key={expense.id} 
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                          onClick={() => handleExpenseClick(expense)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 rounded-full bg-red-100">
-                              <ShoppingBag className="h-4 w-4 text-red-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{expense.description}</p>
-                              <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
+                    {/* All Transactions Tab */}
+                    <TabsContent value="all">
+                      <div className="flex flex-col gap-4">
+                        <Input placeholder="Search transactions..." />
+                        
+                        <div className="flex gap-2">
+                          <Select>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="All Categories" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Categories</SelectItem>
+                              {Object.values(ExpenseCategory).map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      ))}
+                      </div>
                       
-                      {/* Show incomes */}
-                      {incomes.map((income) => (
-                        <div 
-                          key={income.id} 
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                          onClick={() => handleIncomeClick(income)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="p-2 rounded-full bg-emerald-100">
-                              <DollarSign className="h-4 w-4 text-emerald-600" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{income.description}</p>
-                              <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(income.amount)}</p>
+                      {expenses.length > 0 || incomes.length > 0 ? (
+                        <div className="space-y-4 mt-4">
+                          {/* Show combined transactions sorted by date */}
+                          {[...expenses, ...incomes]
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((transaction) => {
+                              // Check if it's an expense or income
+                              const isExpense = 'category' in transaction;
+                              
+                              return (
+                                <div 
+                                  key={transaction.id} 
+                                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                                  onClick={() => isExpense 
+                                    ? handleExpenseClick(transaction as Expense) 
+                                    : handleIncomeClick(transaction as Income)
+                                  }
+                                >
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`p-2 rounded-full ${isExpense ? 'bg-red-100' : 'bg-emerald-100'}`}>
+                                      {isExpense 
+                                        ? <ShoppingBag className="h-4 w-4 text-red-500" />
+                                        : <DollarSign className="h-4 w-4 text-emerald-600" />
+                                      }
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium">{transaction.description}</p>
+                                      <p className="text-xs text-gray-500">
+                                        {isExpense 
+                                          ? `${(transaction as Expense).category}` 
+                                          : `${(transaction as Income).type}`
+                                        } • {new Date(transaction.date).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className={`text-sm font-semibold ${isExpense ? 'text-red-600' : 'text-emerald-600'}`}>
+                                    {formatCurrency(transaction.amount)}
+                                  </p>
+                                </div>
+                              );
+                            })}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10">
-                      <FileText className="mx-auto h-10 w-10 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
-                      <p className="mt-1 text-sm text-gray-500">Add transactions to see them here.</p>
-                    </div>
-                  )}
+                      ) : (
+                        <div className="text-center py-10">
+                          <FileText className="mx-auto h-10 w-10 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
+                          <p className="mt-1 text-sm text-gray-500">Add transactions to see them here.</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    {/* Income Tab */}
+                    <TabsContent value="income">
+                      <div className="flex flex-col gap-4">
+                        <Input placeholder="Search income..." />
+                        
+                        <div className="flex gap-2">
+                          <Select>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="All Types" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Types</SelectItem>
+                              {Object.values(IncomeType).map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      {incomes.length > 0 ? (
+                        <div className="space-y-4 mt-4">
+                          {/* Show incomes sorted by date */}
+                          {[...incomes]
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((income) => (
+                              <div 
+                                key={income.id} 
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                                onClick={() => handleIncomeClick(income)}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 rounded-full bg-emerald-100">
+                                    <DollarSign className="h-4 w-4 text-emerald-600" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">{income.description}</p>
+                                    <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                <p className="text-sm font-semibold text-emerald-600">{formatCurrency(income.amount)}</p>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10">
+                          <DollarSign className="mx-auto h-10 w-10 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No income entries</h3>
+                          <p className="mt-1 text-sm text-gray-500">Add income to see them here.</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    {/* Expenses Tab */}
+                    <TabsContent value="expenses">
+                      <div className="flex flex-col gap-4">
+                        <Input placeholder="Search expenses..." />
+                        
+                        <div className="flex gap-2">
+                          <Select>
+                            <SelectTrigger className="w-[180px]">
+                              <SelectValue placeholder="All Categories" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Categories</SelectItem>
+                              {Object.values(ExpenseCategory).map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      
+                      {expenses.length > 0 ? (
+                        <div className="space-y-4 mt-4">
+                          {/* Show expenses sorted by date */}
+                          {[...expenses]
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((expense) => (
+                              <div 
+                                key={expense.id} 
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                                onClick={() => handleExpenseClick(expense)}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 rounded-full bg-red-100">
+                                    <ShoppingBag className="h-4 w-4 text-red-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">{expense.description}</p>
+                                    <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                <p className="text-sm font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10">
+                          <ShoppingBag className="mx-auto h-10 w-10 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No expense entries</h3>
+                          <p className="mt-1 text-sm text-gray-500">Add expenses to see them here.</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
                 </CardContent>
               </Card>
             </div>

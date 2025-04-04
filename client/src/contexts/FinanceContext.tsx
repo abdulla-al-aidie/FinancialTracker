@@ -315,7 +315,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         saveToLocalStorage("months", monthsArray);
         
         // Process goals data
-        if (goalsData) {
+        if (goalsData && Array.isArray(goalsData)) {
           // Ensure all goals have a priority
           const goalsWithPriority = goalsData.map((goal: Goal) => ({
             ...goal,
@@ -328,16 +328,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           
           // Save back to ensure all goals have priorities (backwards compatibility)
           saveToLocalStorage("goals", goalsWithPriority);
+        } else {
+          // Initialize with empty array if no goals data found
+          goalsRecord[currentActiveMonth] = [];
+          setAllGoals(goalsRecord);
+          saveToLocalStorage("goals", []);
         }
         
         // Process debts data
-        if (debtsData) {
+        if (debtsData && Array.isArray(debtsData)) {
           // Initialize debts for the current month
           debtsRecord[currentActiveMonth] = debtsData;
           setAllDebts(debtsRecord);
           
           // Keep a copy in the old format for backward compatibility
           saveToLocalStorage("debts", debtsData);
+        } else {
+          // Initialize with empty array if no debts data found
+          debtsRecord[currentActiveMonth] = [];
+          setAllDebts(debtsRecord);
+          saveToLocalStorage("debts", []);
         }
         
         // Load month-specific data for current active month
@@ -353,25 +363,35 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         const budgetsRecord: Record<string, Budget[]> = {};
         
         // Add month-specific data to records
-        if (monthIncomes) {
+        if (monthIncomes && Array.isArray(monthIncomes)) {
           incomesRecord[currentActiveMonth] = monthIncomes;
+        } else {
+          incomesRecord[currentActiveMonth] = [];
         }
         
-        if (monthExpenses) {
+        if (monthExpenses && Array.isArray(monthExpenses)) {
           expensesRecord[currentActiveMonth] = monthExpenses;
+        } else {
+          expensesRecord[currentActiveMonth] = [];
         }
         
-        if (monthBudgets) {
+        if (monthBudgets && Array.isArray(monthBudgets)) {
           budgetsRecord[currentActiveMonth] = monthBudgets;
+        } else {
+          budgetsRecord[currentActiveMonth] = [];
         }
         
         // Override goals/debts if month-specific versions exist
-        if (monthGoals) {
+        if (monthGoals && Array.isArray(monthGoals)) {
           goalsRecord[currentActiveMonth] = monthGoals;
+        } else {
+          goalsRecord[currentActiveMonth] = [];
         }
         
-        if (monthDebts) {
+        if (monthDebts && Array.isArray(monthDebts)) {
           debtsRecord[currentActiveMonth] = monthDebts;
+        } else {
+          debtsRecord[currentActiveMonth] = [];
         }
         
         // Set state with loaded data
