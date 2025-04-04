@@ -161,7 +161,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   // Month data
   const [months, setMonths] = useState<MonthData[]>(() => {
-    // Initialize with current month
+    // Try to load months from localStorage first
+    const savedMonths = localStorage.getItem("months");
+    if (savedMonths) {
+      return JSON.parse(savedMonths);
+    }
+    
+    // Initialize with current month if nothing saved
     const currentMonthId = getCurrentMonthId();
     return [
       { 
@@ -171,14 +177,73 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
     ];
   });
-  const [activeMonth, setActiveMonth] = useState<string>(getCurrentMonthId());
+  
+  const [activeMonth, setActiveMonth] = useState<string>(() => {
+    // Try to load active month from localStorage
+    const savedActiveMonth = localStorage.getItem("activeMonth");
+    return savedActiveMonth || getCurrentMonthId();
+  });
   
   // All financial data is organized by month
-  const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>({});
-  const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>({});
-  const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>({});
-  const [allGoals, setAllGoals] = useState<Record<string, Goal[]>>({});  // Month-specific goals
-  const [allDebts, setAllDebts] = useState<Record<string, Debt[]>>({});  // Month-specific debts
+  const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>(() => {
+    // Try to load all incomes from localStorage
+    const savedIncomes: Record<string, Income[]> = {};
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("incomes_")) {
+        const monthId = key.replace("incomes_", "");
+        savedIncomes[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
+      }
+    }
+    return savedIncomes;
+  });
+  
+  const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>(() => {
+    // Try to load all expenses from localStorage
+    const savedExpenses: Record<string, Expense[]> = {};
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("expenses_")) {
+        const monthId = key.replace("expenses_", "");
+        savedExpenses[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
+      }
+    }
+    return savedExpenses;
+  });
+  
+  const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>(() => {
+    // Try to load all budgets from localStorage
+    const savedBudgets: Record<string, Budget[]> = {};
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("budgets_")) {
+        const monthId = key.replace("budgets_", "");
+        savedBudgets[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
+      }
+    }
+    return savedBudgets;
+  });
+  
+  const [allGoals, setAllGoals] = useState<Record<string, Goal[]>>(() => {
+    // Try to load all goals from localStorage
+    const savedGoals: Record<string, Goal[]> = {};
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("goals_")) {
+        const monthId = key.replace("goals_", "");
+        savedGoals[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
+      }
+    }
+    return savedGoals;
+  });
+  
+  const [allDebts, setAllDebts] = useState<Record<string, Debt[]>>(() => {
+    // Try to load all debts from localStorage
+    const savedDebts: Record<string, Debt[]> = {};
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith("debts_")) {
+        const monthId = key.replace("debts_", "");
+        savedDebts[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
+      }
+    }
+    return savedDebts;
+  });
   
   // These are still shared across all months
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -297,6 +362,65 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     calculateSummaryData();
   }, [incomes, expenses]);
+  
+  // Save data to localStorage whenever it changes
+  useEffect(() => {
+    // Save months and active month
+    localStorage.setItem("months", JSON.stringify(months));
+    localStorage.setItem("activeMonth", activeMonth);
+    
+    // Save all other shared data
+    localStorage.setItem("userProfile", JSON.stringify(userProfile));
+    localStorage.setItem("recommendations", JSON.stringify(recommendations));
+    localStorage.setItem("alerts", JSON.stringify(alerts));
+    localStorage.setItem("scenarios", JSON.stringify(scenarios));
+    
+    // Update the last auto-save timestamp
+    localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    
+    // No need to save summary calculations as they're derived
+  }, [months, activeMonth, userProfile, recommendations, alerts, scenarios]);
+  
+  // Save month-specific data whenever it changes
+  useEffect(() => {
+    // Save only if we have data for the active month
+    if (incomes.length > 0) {
+      localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(incomes));
+      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    }
+  }, [incomes, activeMonth]);
+  
+  useEffect(() => {
+    if (expenses.length > 0) {
+      localStorage.setItem(`expenses_${activeMonth}`, JSON.stringify(expenses));
+      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    }
+  }, [expenses, activeMonth]);
+  
+  useEffect(() => {
+    if (budgets.length > 0) {
+      localStorage.setItem(`budgets_${activeMonth}`, JSON.stringify(budgets));
+      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    }
+  }, [budgets, activeMonth]);
+  
+  useEffect(() => {
+    if (goals.length > 0) {
+      localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(goals));
+      // Update legacy format for backward compatibility
+      localStorage.setItem("goals", JSON.stringify(goals));
+      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    }
+  }, [goals, activeMonth]);
+  
+  useEffect(() => {
+    if (debts.length > 0) {
+      localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(debts));
+      // Update legacy format for backward compatibility
+      localStorage.setItem("debts", JSON.stringify(debts));
+      localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    }
+  }, [debts, activeMonth]);
   
   // Calculate summary data
   const calculateSummaryData = () => {
@@ -560,6 +684,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     // Save to localStorage
     localStorage.setItem(`incomes_${activeMonth}`, JSON.stringify(updatedIncomes));
+    localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
     
     toast({
       title: "Income Added",
