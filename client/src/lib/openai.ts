@@ -15,6 +15,20 @@ interface FinancialData {
 type InsightResponse = Array<{ type: string; description: string; impact: string }>;
 type CategoryResponse = { category: string };
 type HealthResponse = { score: number; feedback: string };
+type GoalPriorityResponse = Array<{ 
+  goalId: number; 
+  priorityScore: number; 
+  reasoning: string;
+}>;
+type GoalRecommendationResponse = Array<{
+  goalId: number;
+  recommendations: Array<{ 
+    description: string; 
+    potentialImpact: string;
+    estimatedTimeReduction: string;
+    requiredActions: string[];
+  }>;
+}>;
 
 /**
  * Generate financial insights by calling the backend API proxy
@@ -110,6 +124,163 @@ export async function analyzeFinancialHealth(data: {
     return {
       score: 50,
       feedback: "Unable to analyze financial health at this time.",
+    };
+  }
+}
+
+/**
+ * Prioritize financial goals using AI analysis
+ * This calculates the optimal priority order for user goals based on financial data
+ */
+export async function prioritizeGoals(data: {
+  goals: Array<{
+    id: number;
+    name: string;
+    type: string;
+    targetAmount: number;
+    currentAmount: number;
+    targetDate: string;
+    description: string;
+  }>;
+  financialSnapshot: {
+    totalIncome: number;
+    totalExpenses: number; 
+    savingsRate: number;
+    debtTotal: number;
+    monthlyNetCashflow: number;
+  };
+  expenseBreakdown: Array<{ 
+    category: string; 
+    amount: number;
+    percentOfTotalExpenses: number;
+  }>;
+}): Promise<Array<{ goalId: number; priorityScore: number; reasoning: string }>> {
+  try {
+    const response = await fetch('/api/openai/prioritize-goals', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const priorityData: GoalPriorityResponse = await response.json();
+    return priorityData;
+  } catch (error) {
+    console.error("Error prioritizing goals:", error);
+    // Return empty array to handle error gracefully in UI
+    return [];
+  }
+}
+
+/**
+ * Generate recommendations for achieving goals faster
+ * This analyzes spending patterns and suggests specific actions to meet goals ahead of target dates
+ */
+export async function generateGoalRecommendations(data: {
+  goal: {
+    id: number;
+    name: string;
+    type: string;
+    targetAmount: number;
+    currentAmount: number;
+    targetDate: string;
+    description: string;
+    priority: number;
+  };
+  financialData: {
+    income: Array<{ source: string; amount: number }>;
+    expenses: Array<{ category: string; amount: number }>;
+    savingsRate: number;
+    cashflowTrend: Array<{ month: string; netAmount: number }>;
+  };
+  spendingInsights: {
+    nonEssentialSpending: number;
+    topExpenseCategories: Array<{ category: string; amount: number; isReducible: boolean }>;
+  };
+}): Promise<Array<{
+  description: string;
+  potentialImpact: string;
+  estimatedTimeReduction: string;
+  requiredActions: string[];
+}>> {
+  try {
+    const response = await fetch('/api/openai/goal-recommendations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const recommendationsData: GoalRecommendationResponse = await response.json();
+    // Return the recommendations for the specified goal
+    return recommendationsData[0]?.recommendations || [];
+  } catch (error) {
+    console.error("Error generating goal recommendations:", error);
+    return [];
+  }
+}
+
+/**
+ * Analyze spending patterns for optimization opportunities
+ * This identifies specific expense areas where optimization can accelerate goal achievement
+ */
+export async function analyzeSpendingPatterns(data: {
+  expenses: Array<{ 
+    category: string; 
+    amount: number; 
+    date: string;
+    description?: string; 
+  }>;
+  income: number;
+  targetSavingsRate: number;
+}): Promise<{
+  optimizationAreas: Array<{
+    category: string;
+    currentSpending: number;
+    recommendedReduction: number;
+    potentialSavings: number;
+    specificSuggestions: string[];
+  }>;
+  projectedImpact: {
+    newSavingsRate: number;
+    monthlyIncrease: number;
+    yearlyIncrease: number;
+  };
+}> {
+  try {
+    const response = await fetch('/api/openai/analyze-spending', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const analysisData = await response.json();
+    return analysisData;
+  } catch (error) {
+    console.error("Error analyzing spending patterns:", error);
+    return {
+      optimizationAreas: [],
+      projectedImpact: {
+        newSavingsRate: 0,
+        monthlyIncrease: 0,
+        yearlyIncrease: 0
+      }
     };
   }
 }

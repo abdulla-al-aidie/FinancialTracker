@@ -1,6 +1,11 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { generateFinancialInsights } from "@/lib/openai";
+import { 
+  generateFinancialInsights,
+  prioritizeGoals,
+  generateGoalRecommendations,
+  analyzeSpendingPatterns
+} from "@/lib/openai";
 import { FALLBACK_INSIGHTS } from "@/components/FallbackRecommendations";
 import { 
   Income, 
@@ -105,6 +110,29 @@ interface FinanceContextType {
   generateRecommendations: () => Promise<void>;
   checkBudgetAlerts: () => void;
   compareWithPreviousMonth: () => { incomeChange: number; expenseChange: number; savingsChange: number };
+  
+  // AI Goal Optimization features
+  prioritizeGoalsWithAI: () => Promise<void>;
+  getGoalRecommendations: (goalId: number) => Promise<{
+    description: string;
+    potentialImpact: string;
+    estimatedTimeReduction: string;
+    requiredActions: string[];
+  }[]>;
+  analyzeSpendingForGoals: () => Promise<{
+    optimizationAreas: Array<{
+      category: string;
+      currentSpending: number;
+      recommendedReduction: number;
+      potentialSavings: number;
+      specificSuggestions: string[];
+    }>;
+    projectedImpact: {
+      newSavingsRate: number;
+      monthlyIncrease: number;
+      yearlyIncrease: number;
+    };
+  }>;
 }
 
 // Create context
@@ -965,6 +993,319 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     return { incomeChange, expenseChange, savingsChange };
   };
+
+  // AI Goal Prioritization - Use AI to assess and assign priority rankings to goals
+  const prioritizeGoalsWithAI = async () => {
+    if (goals.length === 0) {
+      toast({
+        title: "No goals found",
+        description: "Please add at least one financial goal to use AI prioritization.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      toast({
+        title: "Analyzing Goals",
+        description: "Our AI is analyzing your financial data and goals...",
+        variant: "default"
+      });
+
+      // Prepare data for OpenAI API
+      const topExpenseCategories = Object.values(ExpenseCategory).map(category => {
+        const categoryExpenses = expenses.filter(exp => exp.category === category);
+        const amount = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        const percentOfTotalExpenses = totalExpenses > 0 
+          ? Math.round((amount / totalExpenses) * 100) 
+          : 0;
+        return { category, amount, percentOfTotalExpenses };
+      })
+      .filter(category => category.amount > 0)
+      .sort((a, b) => b.amount - a.amount);
+
+      const debtTotal = debts.reduce((sum, debt) => sum + debt.balance, 0);
+      
+      const priorityData = await prioritizeGoals({
+        goals: goals.map(goal => ({
+          id: goal.id,
+          name: goal.name,
+          type: goal.type,
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount,
+          targetDate: goal.targetDate,
+          description: goal.description
+        })),
+        financialSnapshot: {
+          totalIncome,
+          totalExpenses,
+          savingsRate,
+          debtTotal,
+          monthlyNetCashflow: netCashflow
+        },
+        expenseBreakdown: topExpenseCategories
+      });
+
+      if (priorityData.length === 0) {
+        toast({
+          title: "Prioritization Failed",
+          description: "We couldn't generate goal priorities at this time. Please try again later.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update goal priorities based on AI recommendations
+      const updatedGoals = goals.map(goal => {
+        const priority = priorityData.find(p => p.goalId === goal.id);
+        return priority 
+          ? { 
+              ...goal, 
+              priority: priority.priorityScore,
+              aiRecommendations: goal.aiRecommendations || [] // Preserve existing recommendations
+            } 
+          : goal;
+      });
+
+      setGoals(updatedGoals);
+      localStorage.setItem("goals", JSON.stringify(updatedGoals));
+
+      toast({
+        title: "Goals Prioritized",
+        description: "Your financial goals have been prioritized based on AI analysis of your financial situation.",
+        variant: "default"
+      });
+
+    } catch (error) {
+      console.error("Error prioritizing goals:", error);
+      toast({
+        title: "Prioritization Failed",
+        description: "We encountered an error while prioritizing your goals. Please try again later.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Get AI recommendations for how to achieve a specific goal faster
+  const getGoalRecommendations = async (goalId: number) => {
+    const goal = goals.find(g => g.id === goalId);
+    
+    if (!goal) {
+      toast({
+        title: "Goal Not Found",
+        description: "The selected goal could not be found.",
+        variant: "destructive"
+      });
+      return [];
+    }
+
+    try {
+      // Get the last 3 months of cashflow data for trends
+      const [year, month] = activeMonth.split('-').map(Number);
+      const cashflowTrend = [];
+      
+      for (let i = 0; i < 3; i++) {
+        let targetYear = year;
+        let targetMonth = month - i;
+        
+        while (targetMonth <= 0) {
+          targetYear--;
+          targetMonth += 12;
+        }
+        
+        const monthId = `${targetYear}-${String(targetMonth).padStart(2, '0')}`;
+        const monthIncomes = allIncomes[monthId] || [];
+        const monthExpenses = allExpenses[monthId] || [];
+        
+        const monthlyIncome = monthIncomes.reduce((sum, income) => sum + income.amount, 0);
+        const monthlyExpense = monthExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+        
+        cashflowTrend.push({
+          month: getMonthName(monthId),
+          netAmount: monthlyIncome - monthlyExpense
+        });
+      }
+
+      // Identify non-essential spending for optimization opportunities
+      const essentialCategories = [
+        ExpenseCategory.RentOrMortgage,
+        ExpenseCategory.Utilities,
+        ExpenseCategory.Groceries,
+        ExpenseCategory.MedicalAndHealth,
+        ExpenseCategory.Insurance,
+        ExpenseCategory.ChildcareOrTuition,
+        ExpenseCategory.DebtPayments
+      ];
+      
+      const nonEssentialSpending = expenses
+        .filter(exp => !essentialCategories.includes(exp.category))
+        .reduce((sum, exp) => sum + exp.amount, 0);
+      
+      // Create category mappings for reducible vs non-reducible expenses
+      const reducibleCategories = [
+        ExpenseCategory.EntertainmentAndDining,
+        ExpenseCategory.SubscriptionsAndMemberships,
+        ExpenseCategory.PersonalCareAndClothing,
+        ExpenseCategory.PetExpenses,
+        ExpenseCategory.Miscellaneous
+      ];
+      
+      const topExpenseCategories = Object.values(ExpenseCategory).map(category => {
+        const categoryExpenses = expenses.filter(exp => exp.category === category);
+        const amount = categoryExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+        return { 
+          category, 
+          amount, 
+          isReducible: reducibleCategories.includes(category)
+        };
+      })
+      .filter(category => category.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 8);
+
+      // Call the OpenAI API for recommendations
+      const recommendations = await generateGoalRecommendations({
+        goal: {
+          id: goal.id,
+          name: goal.name,
+          type: goal.type,
+          targetAmount: goal.targetAmount,
+          currentAmount: goal.currentAmount,
+          targetDate: goal.targetDate,
+          description: goal.description,
+          priority: goal.priority || 5
+        },
+        financialData: {
+          income: incomes.map(inc => ({ 
+            source: inc.type, 
+            amount: inc.amount 
+          })),
+          expenses: expenses.map(exp => ({
+            category: exp.category,
+            amount: exp.amount
+          })),
+          savingsRate,
+          cashflowTrend
+        },
+        spendingInsights: {
+          nonEssentialSpending,
+          topExpenseCategories
+        }
+      });
+
+      if (recommendations.length > 0) {
+        // Update the goal with the recommendations
+        const updatedGoals = goals.map(g => {
+          if (g.id === goalId) {
+            return {
+              ...g,
+              aiRecommendations: recommendations.map((rec, index) => ({
+                id: Date.now() + index,
+                description: rec.description,
+                potentialImpact: rec.potentialImpact,
+                estimatedTimeReduction: rec.estimatedTimeReduction,
+                requiredActions: rec.requiredActions
+              }))
+            };
+          }
+          return g;
+        });
+        
+        setGoals(updatedGoals);
+        localStorage.setItem("goals", JSON.stringify(updatedGoals));
+        
+        toast({
+          title: "Recommendations Generated",
+          description: `We've generated ${recommendations.length} recommendations to help you achieve your goal faster.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "No Recommendations",
+          description: "We couldn't generate recommendations at this time. Please try again later.",
+          variant: "destructive"
+        });
+      }
+
+      return recommendations;
+
+    } catch (error) {
+      console.error("Error generating goal recommendations:", error);
+      toast({
+        title: "Recommendation Generation Failed",
+        description: "We encountered an error while generating recommendations. Please try again later.",
+        variant: "destructive"
+      });
+      return [];
+    }
+  };
+
+  // Analyze spending patterns to identify optimization opportunities for faster goal achievement
+  const analyzeSpendingForGoals = async () => {
+    if (expenses.length === 0) {
+      toast({
+        title: "No Expense Data",
+        description: "Please add some expenses before analyzing spending patterns.",
+        variant: "destructive"
+      });
+      return {
+        optimizationAreas: [],
+        projectedImpact: {
+          newSavingsRate: 0,
+          monthlyIncrease: 0,
+          yearlyIncrease: 0
+        }
+      };
+    }
+
+    try {
+      // Default target savings rate of 20% if current rate is below that
+      const targetSavingsRate = savingsRate < 20 ? 20 : savingsRate + 5;
+      
+      const analysisResult = await analyzeSpendingPatterns({
+        expenses: expenses.map(exp => ({
+          category: exp.category,
+          amount: exp.amount,
+          date: exp.date,
+          description: exp.description
+        })),
+        income: totalIncome,
+        targetSavingsRate
+      });
+
+      if (analysisResult.optimizationAreas.length > 0) {
+        toast({
+          title: "Spending Analysis Complete",
+          description: `We've identified ${analysisResult.optimizationAreas.length} areas where you can optimize spending.`,
+          variant: "default"
+        });
+      } else {
+        toast({
+          title: "No Optimization Areas",
+          description: "We couldn't identify any specific areas to optimize. Your spending appears well-balanced.",
+          variant: "default"
+        });
+      }
+
+      return analysisResult;
+
+    } catch (error) {
+      console.error("Error analyzing spending patterns:", error);
+      toast({
+        title: "Analysis Failed",
+        description: "We encountered an error while analyzing your spending patterns. Please try again later.",
+        variant: "destructive"
+      });
+      return {
+        optimizationAreas: [],
+        projectedImpact: {
+          newSavingsRate: 0,
+          monthlyIncrease: 0,
+          yearlyIncrease: 0
+        }
+      };
+    }
+  };
   
   // User profile management
   const updateUserProfile = (profile: UserProfile) => {
@@ -1045,7 +1386,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         categorizeExpense,
         generateRecommendations,
         checkBudgetAlerts,
-        compareWithPreviousMonth
+        compareWithPreviousMonth,
+        
+        // AI Goal Optimization features
+        prioritizeGoalsWithAI,
+        getGoalRecommendations,
+        analyzeSpendingForGoals
       }}
     >
       {children}

@@ -7,14 +7,14 @@ import OpenAI from "openai";
 import { log } from "./vite";
 
 // Get API key from environment variable
-const apiKey = process.env.OPENAI_API_KEY || "";
+const apiKey = process.env.OPENAI_API_KEY;
 
 // Log API key status (but not the actual key)
 log(`OpenAI API key ${apiKey ? "is available" : "is missing"}`);
 
 // Initialize OpenAI client with API key from environment variable
 const openaiClient = new OpenAI({
-  apiKey: apiKey
+  apiKey: apiKey || "" // Provide empty string as fallback
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -222,7 +222,284 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-  // No server-side routes needed for this application
+
+  // Add endpoint for goal prioritization
+  app.post("/api/openai/prioritize-goals", async (req, res) => {
+    try {
+      const { goals, financialSnapshot, expenseBreakdown } = req.body;
+      
+      // Ensure we have goals to analyze
+      if (!goals || !Array.isArray(goals) || goals.length === 0) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "No goals provided for prioritization"
+        });
+      }
+
+      const prompt = `
+        As an AI financial advisor, prioritize these financial goals based on the financial data provided.
+        Assign each goal a priority score from 1-10 (10 being highest) and provide reasoning.
+        
+        GOALS:
+        ${goals.map((goal, index) => `
+          Goal ${index + 1}: ${goal.name}
+          - Type: ${goal.type}
+          - Target Amount: $${goal.targetAmount}
+          - Current Progress: $${goal.currentAmount}
+          - Target Date: ${goal.targetDate}
+          - Description: ${goal.description}
+        `).join('\n')}
+        
+        FINANCIAL SNAPSHOT:
+        - Total Income: $${financialSnapshot.totalIncome}
+        - Total Expenses: $${financialSnapshot.totalExpenses}
+        - Savings Rate: ${financialSnapshot.savingsRate}%
+        - Total Debt: $${financialSnapshot.debtTotal}
+        - Monthly Net Cashflow: $${financialSnapshot.monthlyNetCashflow}
+        
+        EXPENSE BREAKDOWN:
+        ${expenseBreakdown.map((expense: { category: string; amount: number; percentOfTotalExpenses: number }) => 
+          `- ${expense.category}: $${expense.amount} (${expense.percentOfTotalExpenses}% of expenses)`
+        ).join('\n')}
+        
+        Based on the current financial situation:
+        1. Prioritize debt-related goals when debt is significant
+        2. Prioritize emergency funding if it's not adequate
+        3. Consider time sensitivity of goals
+        4. Evaluate realistic achievement potential within the timeframe
+        5. Consider the current progress toward each goal
+        
+        Respond with a JSON array containing objects with these properties:
+        - goalId: the ID of the goal
+        - priorityScore: number from 1-10
+        - reasoning: brief explanation for the score
+      `;
+
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.2
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({
+          error: "Failed to generate priorities",
+          message: "No response from AI"
+        });
+      }
+
+      try {
+        const parsedResponse = JSON.parse(content);
+        // Verify the response format is correct
+        if (Array.isArray(parsedResponse)) {
+          res.json(parsedResponse);
+        } else {
+          // If the response is not an array, we'll try to extract from a possible nested structure
+          res.json(parsedResponse.priorities || parsedResponse.goals || []);
+        }
+      } catch (error) {
+        console.error("Error parsing OpenAI response:", error);
+        res.status(500).json({
+          error: "Failed to parse AI response",
+          message: "The AI response could not be processed"
+        });
+      }
+    } catch (error) {
+      console.error("Error prioritizing goals:", error);
+      res.status(500).json({
+        error: "Failed to prioritize goals",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // Add endpoint for generating goal-specific recommendations
+  app.post("/api/openai/goal-recommendations", async (req, res) => {
+    try {
+      const { goal, financialData, spendingInsights } = req.body;
+      
+      if (!goal) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "No goal provided for recommendations"
+        });
+      }
+
+      const prompt = `
+        As an expert financial advisor, generate specific recommendations to help achieve this financial goal faster:
+        
+        GOAL DETAILS:
+        - Name: ${goal.name}
+        - Type: ${goal.type}
+        - Target Amount: $${goal.targetAmount}
+        - Current Progress: $${goal.currentAmount} (${((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%)
+        - Target Date: ${goal.targetDate}
+        - Description: ${goal.description}
+        - Priority: ${goal.priority}/10
+        
+        FINANCIAL DATA:
+        Income Sources:
+        ${financialData.income.map((inc: { source: string; amount: number }) => 
+          `- ${inc.source}: $${inc.amount}`
+        ).join('\n')}
+        
+        Expenses:
+        ${financialData.expenses.map((exp: { category: string; amount: number }) => 
+          `- ${exp.category}: $${exp.amount}`
+        ).join('\n')}
+        
+        - Savings Rate: ${financialData.savingsRate}%
+        
+        Cashflow Trend:
+        ${financialData.cashflowTrend.map((cf: { month: string; netAmount: number }) => 
+          `- ${cf.month}: $${cf.netAmount}`
+        ).join('\n')}
+        
+        SPENDING INSIGHTS:
+        - Non-essential Spending: $${spendingInsights.nonEssentialSpending}
+        
+        Top Expense Categories:
+        ${spendingInsights.topExpenseCategories.map((cat: { category: string; amount: number; isReducible: boolean }) => 
+          `- ${cat.category}: $${cat.amount} (${cat.isReducible ? 'Reducible' : 'Non-reducible'})`
+        ).join('\n')}
+        
+        Generate 3-5 specific recommendations that would help achieve this goal faster.
+        For each recommendation, include:
+        1. A clear description of the action
+        2. The potential impact (High/Medium/Low)
+        3. An estimate of how much time could be saved (e.g., "2 months faster")
+        4. 2-3 specific required actions to implement the recommendation
+        
+        Respond with a JSON array with one object containing:
+        - goalId: the ID of the goal
+        - recommendations: array of objects with these properties:
+          - description: string
+          - potentialImpact: string (High/Medium/Low)
+          - estimatedTimeReduction: string
+          - requiredActions: array of strings
+      `;
+
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.3
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({
+          error: "Failed to generate recommendations",
+          message: "No response from AI"
+        });
+      }
+
+      try {
+        const parsedResponse = JSON.parse(content);
+        res.json(Array.isArray(parsedResponse) ? parsedResponse : [parsedResponse]);
+      } catch (error) {
+        console.error("Error parsing OpenAI response:", error);
+        res.status(500).json({
+          error: "Failed to parse AI response",
+          message: "The AI response could not be processed"
+        });
+      }
+    } catch (error) {
+      console.error("Error generating goal recommendations:", error);
+      res.status(500).json({
+        error: "Failed to generate recommendations",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+
+  // Add endpoint for analyzing spending patterns
+  app.post("/api/openai/analyze-spending", async (req, res) => {
+    try {
+      const { expenses, income, targetSavingsRate } = req.body;
+      
+      if (!expenses || !Array.isArray(expenses) || expenses.length === 0) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "No expense data provided for analysis"
+        });
+      }
+
+      const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+      const currentSavingsRate = income > 0 ? ((income - totalSpending) / income) * 100 : 0;
+
+      const prompt = `
+        As a financial analyst, analyze these expenses to find optimization opportunities to reach a target savings rate.
+        
+        CURRENT FINANCIAL SITUATION:
+        - Monthly Income: $${income}
+        - Total Monthly Expenses: $${totalSpending}
+        - Current Savings Rate: ${currentSavingsRate.toFixed(1)}%
+        - Target Savings Rate: ${targetSavingsRate}%
+        
+        EXPENSE BREAKDOWN:
+        ${expenses.map((exp: { category: string; amount: number; date: string; description?: string }) => 
+          `- ${exp.category}: $${exp.amount} (${exp.date})${exp.description ? ` - ${exp.description}` : ''}`
+        ).join('\n')}
+        
+        Based on common financial wisdom and typical spending patterns:
+        1. Identify the top areas where spending could be optimized
+        2. Suggest specific, actionable reductions for each area
+        3. Calculate the potential impact on the savings rate
+        4. Provide realistic specific suggestions for each category
+        
+        Respond with a JSON object containing:
+        - optimizationAreas: array of objects with these properties:
+          - category: string
+          - currentSpending: number
+          - recommendedReduction: number
+          - potentialSavings: number
+          - specificSuggestions: array of strings with actionable advice
+        - projectedImpact: object with these properties:
+          - newSavingsRate: number
+          - monthlyIncrease: number
+          - yearlyIncrease: number
+      `;
+
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        response_format: { type: "json_object" },
+        temperature: 0.2
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({
+          error: "Failed to analyze spending",
+          message: "No response from AI"
+        });
+      }
+
+      try {
+        const parsedResponse = JSON.parse(content);
+        res.json(parsedResponse);
+      } catch (error) {
+        console.error("Error parsing OpenAI response:", error);
+        res.status(500).json({
+          error: "Failed to parse AI response",
+          message: "The AI response could not be processed"
+        });
+      }
+    } catch (error) {
+      console.error("Error analyzing spending patterns:", error);
+      res.status(500).json({
+        error: "Failed to analyze spending",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
   // All data is stored in client-side localStorage
   
   const httpServer = createServer(app);

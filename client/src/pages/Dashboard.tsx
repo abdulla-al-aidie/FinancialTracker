@@ -42,7 +42,7 @@ import {
   Pie, 
   Cell 
 } from "recharts";
-import BudgetFormModal from "@/components/BudgetFormModal";
+
 import GoalFormModal from "@/components/GoalFormModal";
 import IncomeFormModal from "@/components/IncomeFormModal";
 import ExpenseFormModal from "@/components/ExpenseFormModal";
@@ -52,10 +52,11 @@ import ProfileModal from "@/components/ProfileModal";
 import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
+import AIGoalPrioritization from "@/components/AIGoalPrioritization";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
-import BudgetTemplate from "@/components/BudgetTemplate";
+
 
 export default function Dashboard() {
   const { 
@@ -76,7 +77,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   
   // State for modal visibility
-  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [goalModalOpen, setGoalModalOpen] = useState(false);
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
@@ -91,7 +91,6 @@ export default function Dashboard() {
   const [alertPreferencesModalOpen, setAlertPreferencesModalOpen] = useState(false);
   
   // State for selected items for editing
-  const [selectedBudget, setSelectedBudget] = useState<Budget | undefined>(undefined);
   const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
   const [selectedIncome, setSelectedIncome] = useState<Income | undefined>(undefined);
   const [selectedExpense, setSelectedExpense] = useState<Expense | undefined>(undefined);
@@ -154,11 +153,7 @@ export default function Dashboard() {
     percent: budget.limit > 0 ? (budget.spent / budget.limit) * 100 : 0
   })).sort((a, b) => b.percent - a.percent);
 
-  // Handler for budget clicking
-  const handleBudgetClick = (budget: Budget) => {
-    setSelectedBudget(budget);
-    setBudgetModalOpen(true);
-  };
+
   
   // Handler for goal clicking
   const handleGoalClick = (goal: Goal) => {
@@ -330,7 +325,7 @@ export default function Dashboard() {
         
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6 md:grid-cols-7 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-5 md:grid-cols-6 lg:w-auto">
             <TabsTrigger value="overview" className="flex items-center">
               <ChartIcon className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Overview</span>
@@ -342,10 +337,6 @@ export default function Dashboard() {
             <TabsTrigger value="debts" className="flex items-center">
               <Landmark className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Debts</span>
-            </TabsTrigger>
-            <TabsTrigger value="budgets" className="flex items-center">
-              <CreditCard className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Budgets</span>
             </TabsTrigger>
             <TabsTrigger value="goals" className="flex items-center">
               <Target className="h-4 w-4 mr-2" />
@@ -765,154 +756,84 @@ export default function Dashboard() {
             </Card>
           </TabsContent>
           
-          {/* Budgets Tab */}
-          <TabsContent value="budgets" className="space-y-4">
-            {/* Budget Template with Pie Charts */}
-            <BudgetTemplate />
-            
-            {/* Existing Budget Tracker */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Budget Tracker</CardTitle>
-                <CardDescription>Monitor your spending against budget limits</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {budgetData.length > 0 ? (
-                  <div className="space-y-4">
-                    {budgetData.map((budget) => (
-                      <div 
-                        key={budget.category} 
-                        className="space-y-1 hover:bg-gray-50 rounded p-2 cursor-pointer"
-                        onClick={() => {
-                          // Find the original budget object to pass to the form
-                          const originalBudget = budgets.find(b => b.category === budget.category);
-                          if (originalBudget) {
-                            handleBudgetClick(originalBudget);
-                          }
-                        }}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium">{budget.category}</span>
-                          <span className="text-sm text-gray-500">
-                            {formatCurrency(budget.spent)} / {formatCurrency(budget.limit)}
-                          </span>
-                        </div>
-                        <Progress 
-                          value={budget.percent} 
-                          className={`h-2 ${
-                            budget.percent > 90 ? 'bg-red-100' : 
-                            budget.percent > 75 ? 'bg-yellow-100' : 'bg-blue-100'
-                          }`} 
-                        />
-                        <div className="flex justify-end">
-                          <span className={`text-xs ${
-                            budget.percent > 90 ? 'text-red-600' : 
-                            budget.percent > 75 ? 'text-yellow-600' : 'text-blue-600'
-                          }`}>
-                            {budget.percent.toFixed(1)}% used
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                    <Button 
-                      className="w-full" 
-                      onClick={() => {
-                        setSelectedBudget(undefined);
-                        setBudgetModalOpen(true);
-                      }}
-                    >
-                      Create New Budget
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-10">
-                    <CreditCard className="mx-auto h-10 w-10 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No budgets set</h3>
-                    <p className="mt-1 text-sm text-gray-500">Get started by creating your first budget</p>
-                    <div className="mt-6">
-                      <Button onClick={() => {
-                        setSelectedBudget(undefined);
-                        setBudgetModalOpen(true);
-                      }}>
-                        Create a Budget
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
           {/* Goals Tab */}
           <TabsContent value="goals" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Financial Goals</CardTitle>
-                <CardDescription>Track progress towards your saving and debt goals</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {goals.length > 0 ? (
-                  <div className="space-y-5">
-                    {goals.map((goal) => (
-                      <div 
-                        key={goal.id} 
-                        className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => handleGoalClick(goal)}
+            <div className="grid gap-4 grid-cols-1 xl:grid-cols-5">
+              {/* Goal List */}
+              <Card className="xl:col-span-2">
+                <CardHeader>
+                  <CardTitle>Financial Goals</CardTitle>
+                  <CardDescription>Track progress towards your saving and debt goals</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {goals.length > 0 ? (
+                    <div className="space-y-5">
+                      {goals.map((goal) => (
+                        <div 
+                          key={goal.id} 
+                          className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+                          onClick={() => handleGoalClick(goal)}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <Badge variant={goal.type === GoalType.Saving ? "outline" : "secondary"}>
+                                {goal.type === GoalType.Saving ? 'Saving' : 'Debt Payoff'} Goal
+                              </Badge>
+                              <h3 className="text-lg font-medium mt-1">{goal.name}</h3>
+                              <p className="text-sm text-gray-500">{goal.description}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Target: {formatCurrency(goal.targetAmount)}</p>
+                              <p className="text-sm font-medium">
+                                {formatCurrency(goal.currentAmount)} saved
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span>Progress</span>
+                              <span>{((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%</span>
+                            </div>
+                            <Progress value={(goal.currentAmount / goal.targetAmount) * 100} className="h-2" />
+                          </div>
+                          <div className="mt-3 text-xs text-gray-500 text-right">
+                            Target date: {new Date(goal.targetDate).toLocaleDateString()}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        className="w-full"
+                        onClick={() => {
+                          setSelectedGoal(undefined);
+                          setGoalModalOpen(true);
+                        }}
                       >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <Badge variant={goal.type === GoalType.Saving ? "outline" : "secondary"}>
-                              {goal.type === GoalType.Saving ? 'Saving' : 'Debt Payoff'} Goal
-                            </Badge>
-                            <h3 className="text-lg font-medium mt-1">{goal.name}</h3>
-                            <p className="text-sm text-gray-500">{goal.description}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-500">Target: {formatCurrency(goal.targetAmount)}</p>
-                            <p className="text-sm font-medium">
-                              {formatCurrency(goal.currentAmount)} saved
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>Progress</span>
-                            <span>{((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%</span>
-                          </div>
-                          <Progress value={(goal.currentAmount / goal.targetAmount) * 100} className="h-2" />
-                        </div>
-                        <div className="mt-3 text-xs text-gray-500 text-right">
-                          Target date: {new Date(goal.targetDate).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ))}
-                    <Button
-                      className="w-full"
-                      onClick={() => {
-                        setSelectedGoal(undefined);
-                        setGoalModalOpen(true);
-                      }}
-                    >
-                      Create New Goal
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="text-center py-10">
-                    <Target className="mx-auto h-10 w-10 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No goals set</h3>
-                    <p className="mt-1 text-sm text-gray-500">Create a goal for saving or paying off debt</p>
-                    <div className="mt-6">
-                      <Button onClick={() => {
-                        setSelectedGoal(undefined);
-                        setGoalModalOpen(true);
-                      }}>
-                        Create a Goal
+                        Create New Goal
                       </Button>
                     </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <div className="text-center py-10">
+                      <Target className="mx-auto h-10 w-10 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No goals set</h3>
+                      <p className="mt-1 text-sm text-gray-500">Create a goal for saving or paying off debt</p>
+                      <div className="mt-6">
+                        <Button onClick={() => {
+                          setSelectedGoal(undefined);
+                          setGoalModalOpen(true);
+                        }}>
+                          Create a Goal
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              
+              {/* AI Goal Prioritization */}
+              <div className="xl:col-span-3">
+                <AIGoalPrioritization />
+              </div>
+            </div>
           </TabsContent>
           
           {/* Insights Tab */}
@@ -1020,12 +941,7 @@ export default function Dashboard() {
         </Tabs>
       </main>
       
-      {/* Budget Form Modal */}
-      <BudgetFormModal
-        open={budgetModalOpen}
-        onClose={() => setBudgetModalOpen(false)}
-        budget={selectedBudget}
-      />
+
       
       {/* Goal Form Modal */}
       <GoalFormModal

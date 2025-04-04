@@ -66,6 +66,18 @@ export interface Goal {
   currentAmount: number;
   targetDate: string;
   description: string;
+  priority: number; // 1-10 priority ranking, 10 being highest
+  aiRecommendations?: GoalRecommendation[]; // AI-generated recommendations for achieving this goal
+}
+
+// AI-Generated Goal Recommendation
+export interface GoalRecommendation {
+  id: number;
+  description: string;
+  potentialImpact: string; // e.g., "High", "Medium", "Low" 
+  estimatedTimeReduction: string; // e.g., "2 months faster"
+  requiredActions: string[];
+  appliedDate?: string; // When the user applied this recommendation
 }
 
 // Debt Tracking
