@@ -577,6 +577,60 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
     }
   });
   
+  // Knowledge Hub - Answer financial questions
+  app.post("/api/knowledge/ask", async (req, res) => {
+    try {
+      const { question } = req.body;
+      
+      if (!question || typeof question !== 'string' || question.trim() === '') {
+        return res.status(400).json({
+          error: 'Invalid request',
+          message: 'Please provide a valid question'
+        });
+      }
+
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
+      const prompt = `
+        As a financial advisor and educator, answer the following question about personal finance, investments, financial planning, or related topics.
+
+        Provide a comprehensive, accurate, and educational response that helps the user understand the financial concept or answer to their question.
+        Include practical advice when applicable and explain complex terms in an accessible way.
+        If the question is ambiguous or requires more context, provide the most helpful general information you can.
+
+        QUESTION: ${question}
+
+        Your response should be formatted with:
+        1. A direct answer to the question
+        2. Additional context or explanation
+        3. Practical tips or applications when relevant
+        4. Any important considerations or caveats
+      `;
+
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.5,
+        max_tokens: 1000
+      });
+
+      const content = response.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({
+          error: 'Failed to generate answer',
+          message: 'No response from AI'
+        });
+      }
+
+      res.json({ answer: content });
+    } catch (error) {
+      console.error('Error answering financial question:', error);
+      res.status(500).json({
+        error: 'Failed to answer question',
+        message: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    }
+  });
+  
   // All data is stored in client-side localStorage
   
   // Database API endpoints

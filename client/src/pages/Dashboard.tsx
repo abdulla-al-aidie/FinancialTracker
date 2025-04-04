@@ -22,7 +22,8 @@ import {
   FileText,
   Trash2,
   Mail,
-  Bell
+  Bell,
+  BookOpen
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -342,7 +343,7 @@ export default function Dashboard() {
         
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5 md:grid-cols-6 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-6 md:grid-cols-7 lg:w-auto">
             <TabsTrigger value="overview" className="flex items-center">
               <ChartIcon className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Overview</span>
@@ -362,6 +363,10 @@ export default function Dashboard() {
             <TabsTrigger value="insights" className="flex items-center">
               <PiggyBank className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Insights</span>
+            </TabsTrigger>
+            <TabsTrigger value="knowledge" className="flex items-center">
+              <BookOpen className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Knowledge</span>
             </TabsTrigger>
             <TabsTrigger value="settings" className="hidden md:flex md:items-center">
               <Settings2 className="h-4 w-4 mr-2" />
@@ -1013,6 +1018,78 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          {/* Knowledge Hub Tab */}
+          <TabsContent value="knowledge" className="space-y-4">
+            <div className="flex flex-col space-y-4">
+              <div className="flex items-center">
+                <h1 className="text-3xl font-bold mr-2">Knowledge Hub</h1>
+                <BookOpen className="h-6 w-6 text-primary" />
+              </div>
+              <p className="text-muted-foreground">
+                Ask questions about personal finance and get expert answers powered by AI
+              </p>
+              
+              <Button 
+                variant="outline" 
+                className="w-fit"
+                onClick={() => window.location.href = "/knowledge-hub"}
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Open Knowledge Hub
+              </Button>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Financial Learning Center</CardTitle>
+                  <CardDescription>Enhance your financial literacy</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="mb-4">
+                    The Knowledge Hub provides expert answers to all your financial questions. Here are some topics you can explore:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Investment Basics</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• Stock market fundamentals</li>
+                        <li>• Retirement accounts (401k, IRA)</li>
+                        <li>• Risk management strategies</li>
+                        <li>• Asset allocation principles</li>
+                      </ul>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Debt Management</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• Student loan repayment strategies</li>
+                        <li>• Credit card debt elimination</li>
+                        <li>• Mortgage refinancing options</li>
+                        <li>• Debt consolidation approaches</li>
+                      </ul>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Budgeting Techniques</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• Zero-based budgeting</li>
+                        <li>• 50/30/20 rule implementation</li>
+                        <li>• Expense tracking methods</li>
+                        <li>• Emergency fund planning</li>
+                      </ul>
+                    </div>
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Tax Planning</h3>
+                      <ul className="space-y-1 text-sm text-muted-foreground">
+                        <li>• Tax-advantaged accounts</li>
+                        <li>• Deduction and credit opportunities</li>
+                        <li>• Capital gains strategies</li>
+                        <li>• Tax-efficient investing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
           
           {/* Settings Tab */}
