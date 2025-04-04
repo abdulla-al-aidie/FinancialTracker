@@ -204,7 +204,7 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           updateGoal({
             ...relatedGoal,
-            currentAmount: Math.min(relatedGoal.targetAmount, newTotalProgress),
+            // No longer update currentAmount directly - use only month-specific progress
             monthlyProgress: updatedGoalMonthlyProgress
           });
         }
@@ -291,7 +291,7 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
             
             updateGoal({
               ...relatedGoal,
-              currentAmount: Math.max(0, newTotalProgress),
+              // No longer update currentAmount directly
               monthlyProgress: monthlyProgress
             });
           }
@@ -386,7 +386,7 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
             
             updateGoal({
               ...relatedGoal,
-              currentAmount: Math.max(0, newTotalProgress),
+              // No longer update currentAmount directly
               monthlyProgress: updatedMonthlyProgress
             });
           }

@@ -334,11 +334,27 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
             </form>
           </Form>
           
-          {isEditMode && goal?.currentAmount > 0 && (
+          {isEditMode && goal && (
             <div className="border-t pt-3 mt-3">
               <div className="text-sm text-muted-foreground">
-                Current progress: {formatCurrency(goal.currentAmount)} of {formatCurrency(goal.targetAmount)}
-                ({Math.round(goal.currentAmount / goal.targetAmount * 100)}%)
+                {(() => {
+                  // Calculate total progress from monthly data
+                  const monthlyProgress = goal.monthlyProgress || {};
+                  const totalProgress = Object.values(monthlyProgress).reduce(
+                    (sum, amount) => sum + amount, 0
+                  );
+                  
+                  if (totalProgress > 0) {
+                    const progressPercent = Math.round(totalProgress / goal.targetAmount * 100);
+                    return (
+                      <>
+                        Current progress: {formatCurrency(totalProgress)} of {formatCurrency(goal.targetAmount)}
+                        ({progressPercent}%)
+                      </>
+                    );
+                  }
+                  return "No progress tracked yet";
+                })()}
               </div>
             </div>
           )}
