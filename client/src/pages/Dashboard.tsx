@@ -56,9 +56,10 @@ import DebtPaymentModal from "@/components/DebtPaymentModal";
 import ProfileModal from "@/components/ProfileModal";
 import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
-import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import AIGoalPrioritization from "@/components/AIGoalPrioritization";
 import AISpendingOptimization from "@/components/AISpendingOptimization";
+import FinancialHealthAssessment from "@/components/FinancialHealthAssessment";
+import ActionableRecommendations from "@/components/ActionableRecommendations";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
@@ -986,38 +987,14 @@ export default function Dashboard() {
           
           {/* Insights Tab */}
           <TabsContent value="insights" className="space-y-4">
-            <AIInsightsGenerator />
+            {/* New Financial Health Assessment component */}
+            <FinancialHealthAssessment />
             
-            {/* Add the AI Spending Optimization component */}
+            {/* AI Spending Optimization component */}
             <AISpendingOptimization />
             
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommendations</CardTitle>
-                <CardDescription>Personalized suggestions to improve your finances</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {sortedRecommendations.length > 0 ? (
-                    sortedRecommendations.slice(0, 3).map((rec) => (
-                      <Alert key={rec.id} variant={rec.isRead ? "default" : "default"} className={rec.isRead ? "" : "border-primary"}>
-                        <AlertTitle className="flex items-center gap-2">
-                          {rec.type}
-                          {!rec.isRead && <Badge variant="secondary" className="text-xs">New</Badge>}
-                        </AlertTitle>
-                        <AlertDescription>
-                          {rec.description}
-                        </AlertDescription>
-                      </Alert>
-                    ))
-                  ) : (
-                    <div className="py-4 text-center text-gray-500">
-                      <p>Generate new insights to see recommendations</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* New Actionable Recommendations component */}
+            <ActionableRecommendations />
           </TabsContent>
           
           {/* Knowledge Hub Tab */}
