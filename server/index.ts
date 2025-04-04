@@ -7,7 +7,7 @@ const openaiKey = process.env.OPENAI_API_KEY;
 if (!openaiKey) {
   log("WARNING: OPENAI_API_KEY environment variable is not set. AI features will not work.", "server");
 } else {
-  log("OpenAI API key is configured and ready", "server");
+  log("OpenAI API key is configured", "server");
 }
 
 const app = express();

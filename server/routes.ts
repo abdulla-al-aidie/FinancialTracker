@@ -7,14 +7,14 @@ import OpenAI from "openai";
 import { log } from "./vite";
 
 // Get API key from environment variable
-const apiKey = process.env.OPENAI_API_KEY;
+const apiKey = process.env.OPENAI_API_KEY || "";
 
 // Log API key status (but not the actual key)
 log(`OpenAI API key ${apiKey ? "is available" : "is missing"}`);
 
 // Initialize OpenAI client with API key from environment variable
 const openaiClient = new OpenAI({
-  apiKey: apiKey || "" // Provide empty string as fallback
+  apiKey: apiKey
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
