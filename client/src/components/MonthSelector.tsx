@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import SaveButton from "@/components/SaveButton";
 
 export default function MonthSelector() {
   const { 
@@ -85,8 +86,11 @@ export default function MonthSelector() {
   
   return (
     <div className="flex flex-col space-y-4 bg-card p-4 rounded-lg shadow-sm w-full">
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Month Selection</h2>
+        <div className="w-32">
+          <SaveButton />
+        </div>
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">

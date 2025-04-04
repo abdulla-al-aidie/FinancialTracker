@@ -56,7 +56,6 @@ import AIGoalPrioritization from "@/components/AIGoalPrioritization";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
-import SaveButton from "@/components/SaveButton";
 
 
 export default function Dashboard() {
@@ -1040,16 +1039,6 @@ export default function Dashboard() {
                         Alert Preferences
                       </Button>
                     </div>
-                  </div>
-                  
-                  <div className="space-y-2 mt-4">
-                    <h3 className="text-sm font-medium">Data Backup</h3>
-                    <div className="grid grid-cols-1 gap-2">
-                      <SaveButton />
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Save all your financial data to the database for permanent storage
-                    </p>
                   </div>
                 </div>
               </CardContent>
