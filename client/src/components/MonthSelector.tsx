@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
 import { format, addMonths, subMonths } from "date-fns";
 import { MonthData } from "@/types/finance";
@@ -20,12 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 export default function MonthSelector() {
   const [calendarDate, setCalendarDate] = useState<Date | undefined>();
@@ -39,56 +33,58 @@ export default function MonthSelector() {
     compareWithPreviousMonth
   } = useFinance();
   
-  // Generate a list of available months (past 12 months to future 12 months)
-  const generateMonthOptions = () => {
-    const options = [];
-    const now = new Date();
+  // Get the current active month/year
+  const [selectedYear, setSelectedYear] = useState<string>(() => {
+    const [year] = activeMonth.split('-');
+    return year;
+  });
+  
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const [, month] = activeMonth.split('-');
+    return month;
+  });
+  
+  // Generate years (past 5 years to future 5 years)
+  const years = useMemo(() => {
+    const yearsList = [];
+    const currentYear = new Date().getFullYear();
     
-    // Add past 12 months
-    for (let i = 12; i >= 1; i--) {
-      const pastDate = subMonths(now, i);
-      const monthId = format(pastDate, "yyyy-MM");
-      options.push({
-        id: monthId,
-        name: format(pastDate, "MMMM yyyy"),
-        date: pastDate
-      });
+    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
+      yearsList.push(i.toString());
     }
     
-    // Add current month
-    options.push({
-      id: format(now, "yyyy-MM"),
-      name: format(now, "MMMM yyyy"),
-      date: now
-    });
-    
-    // Add future 12 months
-    for (let i = 1; i <= 12; i++) {
-      const futureDate = addMonths(now, i);
-      const monthId = format(futureDate, "yyyy-MM");
-      options.push({
-        id: monthId,
-        name: format(futureDate, "MMMM yyyy"),
-        date: futureDate
-      });
-    }
-    
-    return options;
+    return yearsList;
+  }, []);
+  
+  // Generate months (1-12)
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  
+  // Handle year selection
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    const newMonthId = `${year}-${selectedMonth}`;
+    updateSelectedMonth(newMonthId);
   };
   
-  const monthOptions = generateMonthOptions();
-  
   // Handle month selection
-  const handleMonthSelect = (monthId: string) => {
-    // Check if the month exists in our data
+  const handleMonthChange = (monthIndex: string) => {
+    setSelectedMonth(monthIndex);
+    const newMonthId = `${selectedYear}-${monthIndex}`;
+    updateSelectedMonth(newMonthId);
+  };
+  
+  // Update the selected month
+  const updateSelectedMonth = (monthId: string) => {
+    // Check if month already exists in our data
     const exists = months.some(m => m.id === monthId);
     
     if (!exists) {
       // Month doesn't exist, so add it first
-      const option = monthOptions.find(opt => opt.id === monthId);
-      if (option) {
-        addMonth(option.date.toISOString());
-      }
+      const date = new Date(`${monthId}-01`);
+      addMonth(date.toISOString());
     }
     
     // Set the active month
@@ -99,6 +95,13 @@ export default function MonthSelector() {
   const handleAddCustomMonth = () => {
     if (calendarDate) {
       addMonth(calendarDate.toISOString());
+      
+      // Update the selected year and month
+      const year = format(calendarDate, "yyyy");
+      const month = format(calendarDate, "MM");
+      setSelectedYear(year);
+      setSelectedMonth(month);
+      
       setCalendarDate(undefined);
       setCalendarOpen(false);
     }
@@ -119,7 +122,7 @@ export default function MonthSelector() {
               className="justify-start text-left font-normal"
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
-              Custom Month
+              Calendar View
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="end">
@@ -135,7 +138,7 @@ export default function MonthSelector() {
                 disabled={!calendarDate}
                 size="sm"
               >
-                Add Month
+                Select Month
               </Button>
             </div>
           </PopoverContent>
@@ -143,39 +146,41 @@ export default function MonthSelector() {
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <div className="w-full sm:w-64">
-          <Select value={activeMonth} onValueChange={handleMonthSelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Month" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* First show existing months */}
-              {months.length > 0 && (
-                <>
-                  <div className="font-medium text-xs text-muted-foreground px-2 py-1">
-                    Your Months
-                  </div>
-                  {months.map((month: MonthData) => (
-                    <SelectItem key={month.id} value={month.id}>
-                      {month.name}
-                      {month.isActive && <span className="ml-2 text-muted-foreground">(Current)</span>}
-                    </SelectItem>
-                  ))}
-                  <div className="h-px bg-muted my-1" />
-                </>
-              )}
-              
-              {/* Then show all available months */}
-              <div className="font-medium text-xs text-muted-foreground px-2 py-1">
-                All Months
-              </div>
-              {monthOptions.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex gap-2 w-full sm:w-auto">
+          {/* Month Dropdown */}
+          <div className="w-full sm:w-32">
+            <Select value={selectedMonth} onValueChange={handleMonthChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {monthNames.map((name, index) => (
+                  <SelectItem 
+                    key={index}
+                    value={String(index + 1).padStart(2, '0')}
+                  >
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {/* Year Dropdown */}
+          <div className="w-full sm:w-28">
+            <Select value={selectedYear} onValueChange={handleYearChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((year) => (
+                  <SelectItem key={year} value={year}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         
         {months.length > 1 && (
