@@ -593,9 +593,7 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
       const prompt = `
         As a financial advisor and educator, answer the following question about personal finance, investments, financial planning, or related topics.
 
-        Provide a visually appealing, accurate, and educational response that helps the user understand the financial concept or answer to their question.
-        Format your response with clear headings, concise paragraphs, and bullet points for better readability.
-        Avoid using formats like "1. **Direct Answer:**" that look like generic AI responses.
+        Provide a clearly formatted, accurate, and educational response that helps the user understand the financial concept or answer to their question.
         
         Use a conversational, friendly tone and explain complex terms in an accessible way.
         If the question is ambiguous or requires more context, provide the most helpful general information you can.
@@ -603,10 +601,27 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
         QUESTION: ${question}
 
         Structure your response in the following way:
-        - Start with a direct, plain language answer to the question (no heading needed)
-        - Then add 2-3 clear sections with helpful contextual information using "• Heading Text" instead of "### Heading Text"
-        - Use bullet points (• symbol) for lists of tips or examples
-        - End with important considerations or next steps if applicable
+        1. START with a concise, direct answer paragraph that summarizes the key information (this will be displayed prominently)
+        
+        2. THEN add 2-3 clear sections with this exact format:
+           • Section Title
+           
+           Explanatory text if needed
+           
+           • First bullet point
+           • Second bullet point
+           • Third bullet point
+        
+        3. You MUST format section titles exactly as "• Section Title" (with the bullet point)
+        
+        4. End with a section titled "• Key Takeaways" with 2-3 bullet points summarizing the most important information
+        
+        IMPORTANT FORMATTING RULES:
+        - Each section must be separated by two newlines (\\n\\n)
+        - Use a single bullet point (•) at the start of each section title
+        - Use bullet points (•) for lists, not asterisks, numbers, or dashes
+        - Don't use markdown formatting like bold, italics, headers (###), etc.
+        - Don't use phrases like "In conclusion" or "To summarize"
       `;
 
       const response = await openaiClient.chat.completions.create({

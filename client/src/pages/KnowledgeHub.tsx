@@ -130,24 +130,87 @@ export default function KnowledgeHub() {
                     </CardHeader>
                     <CardContent className="pt-4">
                       <div className="prose prose-slate max-w-none">
-                        {answer.split('\n\n').map((paragraph, idx) => {
-                          // Replace OpenAI formatting patterns
-                          let cleanedText = paragraph
-                            .replace(/^###\s+(.+)$/g, '<strong>• $1</strong>')
-                            .replace(/^\d+\.\s+\*\*([^*]+)\*\*:/g, '<strong>$1</strong>')
-                            .replace(/^\s*\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-                            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-                            
-                          if (idx === 0) {
-                            return <p key={idx} className="text-lg font-medium text-primary">{cleanedText}</p>;
-                          } else if (cleanedText.includes('<strong>')) {
-                            return <div key={idx} dangerouslySetInnerHTML={{ __html: cleanedText }} className="my-3" />;
-                          } else if (cleanedText.startsWith('•')) {
-                            return <p key={idx} className="my-1.5 ml-4 text-sm">{cleanedText}</p>;
-                          } else {
-                            return <p key={idx} className="my-2 text-gray-700">{cleanedText}</p>;
-                          }
-                        })}
+                        {/* Process the answer to create a consistent, aesthetically pleasing format */}
+                        {(() => {
+                          // Split content into paragraphs
+                          const paragraphs = answer.split('\n\n').filter(p => p.trim());
+                          
+                          // First paragraph is the main answer - displayed prominently
+                          const mainAnswer = paragraphs[0] || "";
+                          
+                          // Rest of the content
+                          const restContent = paragraphs.slice(1);
+                          
+                          return (
+                            <>
+                              {/* Main answer - styled prominently */}
+                              <p className="text-lg font-medium text-primary mb-4">{mainAnswer}</p>
+                              
+                              {/* Rest of the content */}
+                              <div className="space-y-4 text-gray-700">
+                                {restContent.map((paragraph, idx) => {
+                                  // Handle section headings (with bullet points)
+                                  if (paragraph.startsWith('• ')) {
+                                    const headingMatch = paragraph.match(/^•\s+([^:]+)$/);
+                                    if (headingMatch) {
+                                      return (
+                                        <h3 key={`heading-${idx}`} className="text-md font-semibold text-gray-800 mt-5 mb-2 border-b pb-1">
+                                          {headingMatch[1]}
+                                        </h3>
+                                      );
+                                    }
+                                  }
+                                  
+                                  // Handle bullet point lists
+                                  if (paragraph.includes('\n• ')) {
+                                    const lines = paragraph.split('\n');
+                                    
+                                    // Check if first line is a heading
+                                    const firstLine = lines[0];
+                                    const restLines = lines.slice(1);
+                                    
+                                    return (
+                                      <div key={`list-${idx}`} className="space-y-1">
+                                        {firstLine.startsWith('• ') ? (
+                                          <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2 border-b pb-1">
+                                            {firstLine.replace(/^•\s+/, '')}
+                                          </h3>
+                                        ) : (
+                                          <p>{firstLine}</p>
+                                        )}
+                                        <ul className="space-y-2 pl-2 mt-2">
+                                          {restLines.map((line, lineIdx) => 
+                                            line.startsWith('• ') ? (
+                                              <li key={`bullet-${lineIdx}`} className="flex items-start">
+                                                <span className="text-primary mr-2 mt-1">•</span>
+                                                <span>{line.replace(/^•\s+/, '')}</span>
+                                              </li>
+                                            ) : (
+                                              <p key={`text-${lineIdx}`}>{line}</p>
+                                            )
+                                          )}
+                                        </ul>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  // Handle single bullet points
+                                  if (paragraph.startsWith('• ')) {
+                                    return (
+                                      <div key={`single-bullet-${idx}`} className="flex items-start">
+                                        <span className="text-primary mr-2 mt-1">•</span>
+                                        <span>{paragraph.replace(/^•\s+/, '')}</span>
+                                      </div>
+                                    );
+                                  }
+                                  
+                                  // Regular paragraphs
+                                  return <p key={`para-${idx}`}>{paragraph}</p>;
+                                })}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </CardContent>
                   </Card>
