@@ -1,6 +1,7 @@
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { generateFinancialInsights } from "@/lib/openai";
+import { FALLBACK_INSIGHTS } from "@/components/FallbackRecommendations";
 import { 
   Income, 
   Expense, 
@@ -287,34 +288,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
   
   // Generate AI recommendations using OpenAI
-  // Fallback insights in case the OpenAI API is unavailable
-  const FALLBACK_INSIGHTS = [
-    {
-      type: "Budget Optimization",
-      description: "Consider reviewing your top expense categories and look for opportunities to reduce spending without significantly impacting your lifestyle. Small changes in daily habits can lead to substantial monthly savings.",
-      impact: "Potential monthly savings"
-    },
-    {
-      type: "Emergency Fund",
-      description: "Aim to build an emergency fund covering 3-6 months of essential expenses. This provides financial security during unexpected events like medical emergencies or job loss.",
-      impact: "Increased financial security"
-    },
-    {
-      type: "Debt Management",
-      description: "If you have multiple debts, consider using either the snowball method (paying smallest balances first) or avalanche method (focusing on highest interest rates first) to systematically reduce debt.",
-      impact: "Reduced interest payments"
-    },
-    {
-      type: "Automated Savings",
-      description: "Set up automatic transfers to your savings account on paydays. This 'pay yourself first' approach ensures consistent saving before you have a chance to spend the money.",
-      impact: "Improved saving habits"
-    },
-    {
-      type: "Expense Tracking",
-      description: "Regularly review your transactions and categorize them correctly. This helps identify spending patterns and areas where you might be overspending without realizing it.",
-      impact: "Better financial awareness"
-    }
-  ];
+  // We import FALLBACK_INSIGHTS from FallbackRecommendations component
 
   const generateRecommendations = async () => {
     try {

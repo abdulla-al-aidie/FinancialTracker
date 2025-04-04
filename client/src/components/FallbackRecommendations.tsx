@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
 
 // Fallback financial insights for when the OpenAI API is unavailable
-const FALLBACK_INSIGHTS = [
+export const FALLBACK_INSIGHTS = [
   {
     type: "Budget Optimization",
     description: "Consider reviewing your top expense categories and look for opportunities to reduce spending without significantly impacting your lifestyle. Small changes in daily habits can lead to substantial monthly savings.",
