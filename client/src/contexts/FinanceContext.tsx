@@ -21,6 +21,7 @@ import {
   UserProfile,
   MonthData
 } from "../types/finance";
+import { getFromDb, listDbKeys, saveToDb } from "../utils/database";
 
 // Default user profile
 const DEFAULT_USER_PROFILE: UserProfile = {
@@ -159,8 +160,49 @@ const saveToLocalStorage = (key: string, data: any) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
     localStorage.setItem("lastAutoSaveTime", new Date().toISOString());
+    
+    // Also save to Replit DB automatically
+    saveToDb(key, data).catch(err => {
+      console.error(`Error auto-saving ${key} to database:`, err);
+    });
   } catch (error) {
     console.error(`Error saving ${key} to localStorage:`, error);
+  }
+};
+
+// Helper function to load data from Replit DB or fallback to localStorage
+const loadData = async (key: string): Promise<any> => {
+  try {
+    // First try to load from Replit DB
+    const dbData = await getFromDb(key);
+    if (dbData !== null) {
+      // Also update localStorage with the DB data to keep them in sync
+      localStorage.setItem(key, JSON.stringify(dbData));
+      return dbData;
+    }
+    
+    // If no data in DB, try localStorage
+    const localData = localStorage.getItem(key);
+    if (localData) {
+      return JSON.parse(localData);
+    }
+    
+    // If no data anywhere, return null
+    return null;
+  } catch (error) {
+    console.error(`Error loading ${key} from database:`, error);
+    
+    // Fallback to localStorage on error
+    try {
+      const localData = localStorage.getItem(key);
+      if (localData) {
+        return JSON.parse(localData);
+      }
+    } catch (localError) {
+      console.error(`Error fallback loading ${key} from localStorage:`, localError);
+    }
+    
+    return null;
   }
 };
 
@@ -170,90 +212,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
   
   // Month data
-  const [months, setMonths] = useState<MonthData[]>(() => {
-    // Try to load months from localStorage first
-    const savedMonths = localStorage.getItem("months");
-    if (savedMonths) {
-      return JSON.parse(savedMonths);
-    }
-    
-    // Initialize with current month if nothing saved
-    const currentMonthId = getCurrentMonthId();
-    return [
-      { 
-        id: currentMonthId, 
-        name: getMonthName(currentMonthId),
-        isActive: true
-      }
-    ];
-  });
-  
-  const [activeMonth, setActiveMonth] = useState<string>(() => {
-    // Try to load active month from localStorage
-    const savedActiveMonth = localStorage.getItem("activeMonth");
-    return savedActiveMonth || getCurrentMonthId();
-  });
+  const [months, setMonths] = useState<MonthData[]>([]);
+  const [activeMonth, setActiveMonth] = useState<string>(getCurrentMonthId());
   
   // All financial data is organized by month
-  const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>(() => {
-    // Try to load all incomes from localStorage
-    const savedIncomes: Record<string, Income[]> = {};
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("incomes_")) {
-        const monthId = key.replace("incomes_", "");
-        savedIncomes[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
-      }
-    }
-    return savedIncomes;
-  });
-  
-  const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>(() => {
-    // Try to load all expenses from localStorage
-    const savedExpenses: Record<string, Expense[]> = {};
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("expenses_")) {
-        const monthId = key.replace("expenses_", "");
-        savedExpenses[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
-      }
-    }
-    return savedExpenses;
-  });
-  
-  const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>(() => {
-    // Try to load all budgets from localStorage
-    const savedBudgets: Record<string, Budget[]> = {};
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("budgets_")) {
-        const monthId = key.replace("budgets_", "");
-        savedBudgets[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
-      }
-    }
-    return savedBudgets;
-  });
-  
-  const [allGoals, setAllGoals] = useState<Record<string, Goal[]>>(() => {
-    // Try to load all goals from localStorage
-    const savedGoals: Record<string, Goal[]> = {};
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("goals_")) {
-        const monthId = key.replace("goals_", "");
-        savedGoals[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
-      }
-    }
-    return savedGoals;
-  });
-  
-  const [allDebts, setAllDebts] = useState<Record<string, Debt[]>>(() => {
-    // Try to load all debts from localStorage
-    const savedDebts: Record<string, Debt[]> = {};
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith("debts_")) {
-        const monthId = key.replace("debts_", "");
-        savedDebts[monthId] = JSON.parse(localStorage.getItem(key) || "[]");
-      }
-    }
-    return savedDebts;
-  });
+  const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>({});
+  const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>({});
+  const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>({});
+  const [allGoals, setAllGoals] = useState<Record<string, Goal[]>>({});
+  const [allDebts, setAllDebts] = useState<Record<string, Debt[]>>({});
   
   // These are still shared across all months
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
@@ -275,97 +242,143 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const goals = allGoals[activeMonth] || [];
   const debts = allDebts[activeMonth] || [];
   
-  // Load data from localStorage on initial render
+  // Load data from database or localStorage on initial render
   useEffect(() => {
-    const savedUserProfile = localStorage.getItem("userProfile");
-    const savedGoals = localStorage.getItem("goals");
-    const savedDebts = localStorage.getItem("debts");
-    const savedScenarios = localStorage.getItem("scenarios");
-    const savedMonths = localStorage.getItem("months");
-    
-    // Load shared data that persists across months
-    if (savedUserProfile) setUserProfile(JSON.parse(savedUserProfile));
-    
-    // Initialize goals and debts records
-    const goalsRecord: Record<string, Goal[]> = {};
-    const debtsRecord: Record<string, Debt[]> = {};
-    
-    if (savedGoals) {
-      // Parse the goals and ensure they all have a priority
-      const loadedGoals = JSON.parse(savedGoals);
-      const goalsWithPriority = loadedGoals.map((goal: Goal) => ({
-        ...goal,
-        priority: goal.priority !== undefined ? goal.priority : 5 // Set default priority if missing
-      }));
-      
-      // Initialize goals for the current month
-      goalsRecord[activeMonth] = goalsWithPriority;
-      setAllGoals(goalsRecord);
-      
-      // Save back to ensure all goals have priorities (kept for backward compatibility)
-      localStorage.setItem("goals", JSON.stringify(goalsWithPriority));
-    }
-    
-    if (savedDebts) {
-      const loadedDebts = JSON.parse(savedDebts);
-      
-      // Initialize debts for the current month
-      debtsRecord[activeMonth] = loadedDebts;
-      setAllDebts(debtsRecord);
-      
-      // Keep a copy in the old format for backward compatibility
-      localStorage.setItem("debts", JSON.stringify(loadedDebts));
-    }
-    if (savedScenarios) setScenarios(JSON.parse(savedScenarios));
-    
-    // Load months data or initialize with current month if none exists
-    if (savedMonths) {
-      const parsedMonths = JSON.parse(savedMonths);
-      setMonths(parsedMonths);
-      
-      // Find active month
-      const activeMonthData = parsedMonths.find((m: MonthData) => m.isActive);
-      if (activeMonthData) {
-        setActiveMonth(activeMonthData.id);
+    const loadInitialData = async () => {
+      try {
+        // Load shared data from database or fallback to localStorage
+        const userProfileData = await loadData("userProfile");
+        const goalsData = await loadData("goals");
+        const debtsData = await loadData("debts");
+        const scenariosData = await loadData("scenarios");
+        const monthsData = await loadData("months");
+        
+        // Active month is determined from months data or current month
+        let currentActiveMonth = activeMonth;
+        
+        // Load shared data that persists across months
+        if (userProfileData) setUserProfile(userProfileData);
+        if (scenariosData) setScenarios(scenariosData);
+        
+        // Initialize goals and debts records
+        const goalsRecord: Record<string, Goal[]> = {};
+        const debtsRecord: Record<string, Debt[]> = {};
+        
+        // Load and process months data
+        if (monthsData) {
+          setMonths(monthsData);
+          
+          // Find active month
+          const activeMonthData = monthsData.find((m: MonthData) => m.isActive);
+          if (activeMonthData) {
+            currentActiveMonth = activeMonthData.id;
+            setActiveMonth(activeMonthData.id);
+          }
+        } else {
+          // Initialize with current month if nothing saved
+          const currentMonthId = getCurrentMonthId();
+          const initialMonths = [
+            { 
+              id: currentMonthId, 
+              name: getMonthName(currentMonthId),
+              isActive: true
+            }
+          ];
+          setMonths(initialMonths);
+          saveToLocalStorage("months", initialMonths);
+        }
+        
+        // Process goals data
+        if (goalsData) {
+          // Ensure all goals have a priority
+          const goalsWithPriority = goalsData.map((goal: Goal) => ({
+            ...goal,
+            priority: goal.priority !== undefined ? goal.priority : 5 // Set default priority if missing
+          }));
+          
+          // Initialize goals for the current month
+          goalsRecord[currentActiveMonth] = goalsWithPriority;
+          setAllGoals(goalsRecord);
+          
+          // Save back to ensure all goals have priorities (backwards compatibility)
+          saveToLocalStorage("goals", goalsWithPriority);
+        }
+        
+        // Process debts data
+        if (debtsData) {
+          // Initialize debts for the current month
+          debtsRecord[currentActiveMonth] = debtsData;
+          setAllDebts(debtsRecord);
+          
+          // Keep a copy in the old format for backward compatibility
+          saveToLocalStorage("debts", debtsData);
+        }
+        
+        // Load month-specific data for current active month
+        const monthIncomes = await loadData(`incomes_${currentActiveMonth}`);
+        const monthExpenses = await loadData(`expenses_${currentActiveMonth}`);
+        const monthBudgets = await loadData(`budgets_${currentActiveMonth}`);
+        const monthGoals = await loadData(`goals_${currentActiveMonth}`);
+        const monthDebts = await loadData(`debts_${currentActiveMonth}`);
+        
+        // Initialize month data records
+        const incomesRecord: Record<string, Income[]> = {};
+        const expensesRecord: Record<string, Expense[]> = {};
+        const budgetsRecord: Record<string, Budget[]> = {};
+        
+        // Add month-specific data to records
+        if (monthIncomes) {
+          incomesRecord[currentActiveMonth] = monthIncomes;
+        }
+        
+        if (monthExpenses) {
+          expensesRecord[currentActiveMonth] = monthExpenses;
+        }
+        
+        if (monthBudgets) {
+          budgetsRecord[currentActiveMonth] = monthBudgets;
+        }
+        
+        // Override goals/debts if month-specific versions exist
+        if (monthGoals) {
+          goalsRecord[currentActiveMonth] = monthGoals;
+        }
+        
+        if (monthDebts) {
+          debtsRecord[currentActiveMonth] = monthDebts;
+        }
+        
+        // Set state with loaded data
+        setAllIncomes(incomesRecord);
+        setAllExpenses(expensesRecord);
+        setAllBudgets(budgetsRecord);
+        
+        // Ensure goals and debts are set
+        if (Object.keys(goalsRecord).length > 0) {
+          setAllGoals(goalsRecord);
+        }
+        
+        if (Object.keys(debtsRecord).length > 0) {
+          setAllDebts(debtsRecord);
+        }
+        
+        // Generate initial recommendations and alerts
+        setTimeout(() => {
+          generateInitialRecommendations();
+          checkBudgetAlerts();
+        }, 1000);
+      } catch (error) {
+        console.error("Error loading initial data:", error);
+        
+        // Still try to generate initial recommendations if data exists
+        setTimeout(() => {
+          generateInitialRecommendations();
+          checkBudgetAlerts();
+        }, 1000);
       }
-    } else {
-      // Save the initialized current month
-      localStorage.setItem("months", JSON.stringify(months));
-    }
+    };
     
-    // Load month-specific data for active month
-    const monthId = activeMonth;
-    const savedMonthIncomes = localStorage.getItem(`incomes_${monthId}`);
-    const savedMonthExpenses = localStorage.getItem(`expenses_${monthId}`);
-    const savedMonthBudgets = localStorage.getItem(`budgets_${monthId}`);
-    
-    // Initialize month data records
-    const incomesRecord: Record<string, Income[]> = {};
-    const expensesRecord: Record<string, Expense[]> = {};
-    const budgetsRecord: Record<string, Budget[]> = {};
-    
-    if (savedMonthIncomes) {
-      incomesRecord[monthId] = JSON.parse(savedMonthIncomes);
-    }
-    
-    if (savedMonthExpenses) {
-      expensesRecord[monthId] = JSON.parse(savedMonthExpenses);
-    }
-    
-    if (savedMonthBudgets) {
-      budgetsRecord[monthId] = JSON.parse(savedMonthBudgets);
-    }
-    
-    // Set state with loaded data
-    setAllIncomes(incomesRecord);
-    setAllExpenses(expensesRecord);
-    setAllBudgets(budgetsRecord);
-    
-    // Generate initial recommendations and alerts
-    setTimeout(() => {
-      generateInitialRecommendations();
-      checkBudgetAlerts();
-    }, 1000);
+    loadInitialData();
   }, []);
   
   // Recalculate summary data when income or expenses change
