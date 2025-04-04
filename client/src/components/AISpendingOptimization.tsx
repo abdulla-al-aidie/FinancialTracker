@@ -5,10 +5,20 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, TrendingUp, Sparkles, AlertTriangle } from "lucide-react";
+import { 
+  Loader2, 
+  TrendingUp, 
+  Sparkles, 
+  AlertTriangle, 
+  ArrowDownIcon, 
+  ArrowUpIcon, 
+  TrendingDown, 
+  CalendarIcon,
+  BarChart3Icon
+} from "lucide-react";
 
 export default function AISpendingOptimization() {
-  const { analyzeSpendingForGoals } = useFinance();
+  const { analyzeSpendingForGoals, months } = useFinance();
   
   const [isAnalyzingSpending, setIsAnalyzingSpending] = useState(false);
   const [optimizationData, setOptimizationData] = useState<{
@@ -24,6 +34,12 @@ export default function AISpendingOptimization() {
       monthlyIncrease: number;
       yearlyIncrease: number;
     };
+    monthlyInsights: Array<{
+      type: string;
+      description: string;
+      comparison: string;
+      months: string[];
+    }>;
   } | null>(null);
 
   // Function to analyze spending patterns for goal optimization
@@ -188,6 +204,56 @@ export default function AISpendingOptimization() {
                     </div>
                   ))}
                 </div>
+                
+                {optimizationData.monthlyInsights && optimizationData.monthlyInsights.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <BarChart3Icon className="h-5 w-5 mr-2 text-primary" />
+                      Monthly Spending Insights
+                    </h3>
+                    <div className="space-y-4">
+                      {optimizationData.monthlyInsights.map((insight, index) => (
+                        <Card key={index} className="bg-muted/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-3">
+                              {insight.type === "Increase" && (
+                                <ArrowUpIcon className="h-5 w-5 text-red-500 mt-1 flex-shrink-0" />
+                              )}
+                              {insight.type === "Decrease" && (
+                                <ArrowDownIcon className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+                              )}
+                              {insight.type === "Pattern" && (
+                                <TrendingUp className="h-5 w-5 text-blue-500 mt-1 flex-shrink-0" />
+                              )}
+                              {insight.type === "Trend" && (
+                                <TrendingDown className="h-5 w-5 text-amber-500 mt-1 flex-shrink-0" />
+                              )}
+                              {insight.type === "Comparison" && (
+                                <CalendarIcon className="h-5 w-5 text-purple-500 mt-1 flex-shrink-0" />
+                              )}
+                              
+                              <div>
+                                <div className="font-medium">{insight.description}</div>
+                                <div className="text-sm text-muted-foreground mt-1">
+                                  {insight.comparison}
+                                </div>
+                                {insight.months && insight.months.length > 0 && (
+                                  <div className="flex gap-2 mt-2">
+                                    {insight.months.map(month => (
+                                      <Badge key={month} variant="outline" className="text-xs">
+                                        {month}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </CardContent>

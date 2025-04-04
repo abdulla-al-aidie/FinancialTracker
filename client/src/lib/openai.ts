@@ -247,8 +247,9 @@ export async function generateGoalRecommendations(data: {
 }
 
 /**
- * Analyze spending patterns for optimization opportunities
+ * Analyze spending patterns for optimization opportunities including historical data
  * This identifies specific expense areas where optimization can accelerate goal achievement
+ * and provides insights on spending patterns between months
  */
 export async function analyzeSpendingPatterns(data: {
   expenses: Array<{ 
@@ -257,8 +258,18 @@ export async function analyzeSpendingPatterns(data: {
     date: string;
     description?: string; 
   }>;
+  historicalExpenses: Array<{
+    monthId: string;
+    expenses: Array<{ 
+      category: string; 
+      amount: number; 
+      date: string;
+      description?: string; 
+    }>;
+  }>;
   income: number;
   targetSavingsRate: number;
+  currentMonth: string;
 }): Promise<{
   optimizationAreas: Array<{
     category: string;
@@ -272,6 +283,12 @@ export async function analyzeSpendingPatterns(data: {
     monthlyIncrease: number;
     yearlyIncrease: number;
   };
+  monthlyInsights: Array<{
+    type: string;
+    description: string;
+    comparison: string;
+    months: string[];
+  }>;
 }> {
   try {
     const response = await fetch('/api/openai/analyze-spending', {
@@ -296,7 +313,8 @@ export async function analyzeSpendingPatterns(data: {
         newSavingsRate: 0,
         monthlyIncrease: 0,
         yearlyIncrease: 0
-      }
+      },
+      monthlyInsights: []
     };
   }
 }

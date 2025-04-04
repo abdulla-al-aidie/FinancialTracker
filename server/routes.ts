@@ -467,7 +467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add endpoint for analyzing spending patterns
   app.post("/api/openai/analyze-spending", async (req, res) => {
     try {
-      const { expenses, income, targetSavingsRate } = req.body;
+      const { expenses, historicalExpenses, income, targetSavingsRate, currentMonth } = req.body;
       
       if (!expenses || !Array.isArray(expenses) || expenses.length === 0) {
         return res.status(400).json({
@@ -479,25 +479,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalSpending = expenses.reduce((sum, expense) => sum + expense.amount, 0);
       const currentSavingsRate = income > 0 ? ((income - totalSpending) / income) * 100 : 0;
 
+      // Format historical expense data for comparison
+      let historicalExpenseText = '';
+      if (historicalExpenses && Array.isArray(historicalExpenses) && historicalExpenses.length > 0) {
+        historicalExpenseText = `
+HISTORICAL EXPENSES:`;
+
+        for (const monthData of historicalExpenses) {
+          if (monthData.expenses && monthData.expenses.length > 0) {
+            const monthTotal = monthData.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            
+            historicalExpenseText += `
+Month: ${monthData.monthId}
+Total Spending: $${monthTotal.toFixed(2)}
+Breakdown:
+${monthData.expenses.map((exp: { category: string; amount: number; date: string; description?: string }) => 
+  `- ${exp.category}: $${exp.amount} (${exp.date})${exp.description ? ` - ${exp.description}` : ''}`
+).join('\n')}
+`;
+          }
+        }
+      }
+
       const prompt = `
-        As a financial analyst, analyze these expenses to find optimization opportunities to reach a target savings rate.
+        As a financial analyst, analyze these expenses to find optimization opportunities to reach a target savings rate, and provide insights on spending patterns compared to previous months.
         
-        CURRENT FINANCIAL SITUATION:
+        CURRENT FINANCIAL SITUATION (${currentMonth}):
         - Monthly Income: $${income}
         - Total Monthly Expenses: $${totalSpending}
         - Current Savings Rate: ${currentSavingsRate.toFixed(1)}%
         - Target Savings Rate: ${targetSavingsRate}%
         
-        EXPENSE BREAKDOWN:
+        CURRENT EXPENSE BREAKDOWN:
         ${expenses.map((exp: { category: string; amount: number; date: string; description?: string }) => 
           `- ${exp.category}: $${exp.amount} (${exp.date})${exp.description ? ` - ${exp.description}` : ''}`
         ).join('\n')}
+        
+        ${historicalExpenseText}
         
         Based on common financial wisdom and typical spending patterns:
         1. Identify the top areas where spending could be optimized
         2. Suggest specific, actionable reductions for each area
         3. Calculate the potential impact on the savings rate
         4. Provide realistic specific suggestions for each category
+        5. Compare current month spending with previous months to identify trends and patterns
         
         Respond with a JSON object containing:
         - optimizationAreas: array of objects with these properties:
@@ -510,6 +535,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           - newSavingsRate: number
           - monthlyIncrease: number
           - yearlyIncrease: number
+        - monthlyInsights: array of objects with these properties:
+          - type: string (like "Increase", "Decrease", "Pattern")
+          - description: string (detailed insight finding)
+          - comparison: string (percentage or amount change)
+          - months: array of strings (the months being compared)
       `;
 
       // the newest OpenAI model is "gpt-4o" which was released May 13, 2024

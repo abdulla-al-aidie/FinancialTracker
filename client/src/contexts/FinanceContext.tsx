@@ -1637,6 +1637,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   };
 
   // Analyze spending patterns to identify optimization opportunities for faster goal achievement
+  // Including historical data from previous months for better insights
   const analyzeSpendingForGoals = async () => {
     if (expenses.length === 0) {
       toast({
@@ -1650,13 +1651,54 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           newSavingsRate: 0,
           monthlyIncrease: 0,
           yearlyIncrease: 0
-        }
+        },
+        monthlyInsights: []
       };
     }
 
     try {
       // Default target savings rate of 20% if current rate is below that
       const targetSavingsRate = savingsRate < 20 ? 20 : savingsRate + 5;
+      
+      // Get previous months data for historical comparison
+      const sortedMonthIds = [...months]
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .map(month => month.id);
+      
+      // Get current month's index to find previous months
+      const activeMonthIndex = sortedMonthIds.indexOf(activeMonth);
+      
+      // Collect expenses from up to 3 previous months if available
+      const historicalExpenses: {
+        monthId: string;
+        expenses: Array<{
+          category: string;
+          amount: number;
+          date: string;
+          description?: string;
+        }>;
+      }[] = [];
+      
+      // Loop through up to 3 previous months
+      for (let i = 1; i <= 3; i++) {
+        const prevMonthIndex = activeMonthIndex - i;
+        if (prevMonthIndex >= 0) {
+          const prevMonthId = sortedMonthIds[prevMonthIndex];
+          const prevMonthExpenses = allExpenses[prevMonthId] || [];
+          
+          if (prevMonthExpenses.length > 0) {
+            historicalExpenses.push({
+              monthId: prevMonthId,
+              expenses: prevMonthExpenses.map(exp => ({
+                category: exp.category,
+                amount: exp.amount,
+                date: exp.date,
+                description: exp.description
+              }))
+            });
+          }
+        }
+      }
       
       const analysisResult = await analyzeSpendingPatterns({
         expenses: expenses.map(exp => ({
@@ -1665,8 +1707,10 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           date: exp.date,
           description: exp.description
         })),
+        historicalExpenses,
         income: totalIncome,
-        targetSavingsRate
+        targetSavingsRate,
+        currentMonth: activeMonth
       });
 
       if (analysisResult.optimizationAreas.length > 0) {
@@ -1698,7 +1742,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           newSavingsRate: 0,
           monthlyIncrease: 0,
           yearlyIncrease: 0
-        }
+        },
+        monthlyInsights: []
       };
     }
   };
