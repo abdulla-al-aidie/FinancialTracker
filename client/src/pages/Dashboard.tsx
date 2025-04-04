@@ -372,11 +372,11 @@ export default function Dashboard() {
                         <PieChart>
                           <Pie
                             data={expensesByCategory}
-                            cx="50%"
-                            cy="50%"
+                            cx="45%"
+                            cy="45%"
                             labelLine={true}
                             label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
-                            outerRadius={70}
+                            outerRadius={90}
                             fill="#8884d8"
                             dataKey="value"
                           >
@@ -384,7 +384,16 @@ export default function Dashboard() {
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                           </Pie>
-                          <Legend layout="vertical" verticalAlign="bottom" align="center" />
+                          <Legend 
+                            layout="horizontal" 
+                            verticalAlign="bottom" 
+                            align="center"
+                            iconSize={8}
+                            wrapperStyle={{
+                              fontSize: '10px',
+                              paddingTop: '10px'
+                            }} 
+                          />
                           <Tooltip 
                             formatter={(value) => formatCurrency(Number(value))}
                             labelFormatter={(name) => `${name}`} 
@@ -678,7 +687,15 @@ export default function Dashboard() {
                         <div className="p-4">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-medium">{debt.name}</h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium">{debt.name}</h3>
+                                {/* Show paid off indicator when appropriate */}
+                                {debt.isPaidOff && (
+                                  <Badge variant="outline" className="bg-green-500 text-white">
+                                    PAID OFF
+                                  </Badge>
+                                )}
+                              </div>
                               <p className="text-sm text-gray-500">Due: {new Date(debt.dueDate).toLocaleDateString()}</p>
                               {debt.priority !== undefined && (
                                 <Badge variant="secondary" className="mt-1">
@@ -721,12 +738,17 @@ export default function Dashboard() {
                                   ? Math.min(100, Math.round((totalPaid / debt.originalPrincipal) * 100))
                                   : 0;
                               })()} 
-                              className="h-1.5" 
+                              className={`h-2 ${debt.isPaidOff ? 'bg-green-100' : ''}`}
+                              // Use a class in Tailwind instead of indicatorClassName
+                              style={{ 
+                                '--indicator-color': debt.isPaidOff ? '#10B981' : undefined 
+                              } as React.CSSProperties}
                             />
                             
                             {/* Payment summary - show both total and monthly */}
-                            <div className="flex justify-between text-xs mt-1.5">
-                              <div className="text-gray-500">
+                            <div className="flex justify-between text-xs mt-2">
+                              <div>
+                                <span className="text-gray-500 mr-1">Repaid:</span>
                                 <span className="font-medium text-emerald-600">
                                   {formatCurrency((() => {
                                     const monthlyPayments = debt.monthlyPayments || {};
@@ -735,14 +757,14 @@ export default function Dashboard() {
                                     );
                                   })())}
                                 </span>
-                                <span className="ml-1">total repaid</span>
+                                <span className="text-gray-500 text-xs ml-1">total</span>
                               </div>
                               
                               {/* Show month-specific payment information if available */}
-                              {debt.monthlyPayments && debt.monthlyPayments[activeMonth] !== undefined && (
-                                <div className="text-gray-500">
-                                  <span>{formatCurrency(debt.monthlyPayments[activeMonth])}</span>
-                                  <span className="ml-1">this month</span>
+                              {debt.monthlyPayments && debt.monthlyPayments[activeMonth] !== undefined && debt.monthlyPayments[activeMonth] > 0 && (
+                                <div>
+                                  <span className="text-gray-500 mr-1">This month:</span>
+                                  <span className="font-medium">{formatCurrency(debt.monthlyPayments[activeMonth])}</span>
                                 </div>
                               )}
                             </div>

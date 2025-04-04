@@ -1751,6 +1751,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         });
       }
       
+      // Check if goal is complete based on the cumulative progress
+      const isComplete = totalProgress >= sourceGoal.targetAmount;
+      
       if (existingGoal) {
         // Keep the target month's own progress but update the cumulative amount
         return {
@@ -1760,7 +1763,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           description: sourceGoal.description,     // Keep description from source
           type: sourceGoal.type,                   // Keep goal type from source
           priority: sourceGoal.priority,           // Keep priority from source
-          currentAmount: totalProgress,            // Update with calculated total progress
+          currentAmount: isComplete ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
+          isComplete: isComplete,                  // Mark as complete if target reached
           monthlyProgress: {
             ...sourceGoal.monthlyProgress,         // Bring source monthly progress
             ...existingGoal.monthlyProgress        // But preserve target month's own progress (if any)
@@ -1770,7 +1774,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         // Goal doesn't exist in target month, create it with proper progress
         return {
           ...sourceGoal,
-          currentAmount: totalProgress,            // Set the cumulative progress
+          currentAmount: isComplete ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
+          isComplete: isComplete,                  // Mark as complete if target reached
           monthlyProgress: { ...sourceGoal.monthlyProgress }  // Copy monthly progress data
         };
       }
@@ -1838,6 +1843,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         updatedMonthlyBalances[targetMonthId] = latestBalance;
       }
       
+      // Check if debt is fully paid off
+      const isFullyPaid = latestBalance <= 0;
+      
       if (existingDebt) {
         // Update existing debt with latest information from source month
         return {
@@ -1850,7 +1858,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           priority: sourceDebt.priority,
           // Important: The main balance field is no longer used for calculations
           // It serves as a fallback for months with no specific balance
-          balance: sourceDebt.balance,
+          balance: isFullyPaid ? 0 : sourceDebt.balance,
           // Preserve any payments made in the target month
           monthlyPayments: {
             ...sourceMonthlyPayments,
@@ -1866,20 +1874,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
             existingDebt.monthlyPayments && existingDebt.monthlyPayments[targetMonthId] 
               ? existingDebt.monthlyPayments[targetMonthId] 
               : 0
-          )
+          ),
+          // Mark debt as paid off if balance is zero or negative
+          isPaidOff: isFullyPaid
         };
       } else {
         // Create new debt with the latest balance
         return {
           ...sourceDebt,
-          // The main balance remains unchanged as a fallback
-          balance: sourceDebt.balance,
+          // The main balance is set to 0 if paid off
+          balance: isFullyPaid ? 0 : sourceDebt.balance,
           // Copy payment history
           monthlyPayments: { ...sourceMonthlyPayments },
           // Set balance for this new month
           monthlyBalances: updatedMonthlyBalances,
           // Update total paid amount
-          totalPaid: totalPayments
+          totalPaid: totalPayments,
+          // Mark debt as paid off if balance is zero or negative
+          isPaidOff: isFullyPaid
         };
       }
     });

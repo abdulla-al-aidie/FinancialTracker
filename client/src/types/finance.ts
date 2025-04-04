@@ -96,6 +96,7 @@ export interface Debt {
   priority?: number; // Higher number means higher priority
   monthlyPayments: Record<string, number>; // Monthly payments by month ID (YYYY-MM)
   monthlyBalances: Record<string, number>; // Balance at the end of each month by month ID (YYYY-MM)
+  isPaidOff?: boolean; // Indicates if the debt has been fully paid off
 }
 
 // AI Recommendation

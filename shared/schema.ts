@@ -96,6 +96,9 @@ export const debts = pgTable("debts", {
   dueDate: date("due_date"),
   monthlyPayments: jsonb("monthly_payments").default({}), // Store monthly payments as JSON
   monthlyBalances: jsonb("monthly_balances").default({}), // Store monthly balances as JSON
+  originalPrincipal: numeric("original_principal", { precision: 10, scale: 2 }).notNull(), // Original loan amount
+  totalPaid: numeric("total_paid", { precision: 10, scale: 2 }).default(0), // Total amount paid across all months
+  isPaidOff: boolean("is_paid_off").default(false), // Flag to indicate if debt is fully paid off
   createdAt: timestamp("created_at").defaultNow(),
 });
 
