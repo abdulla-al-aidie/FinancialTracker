@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useFinance } from "@/contexts/FinanceContext";
+import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   DollarSign,
   CreditCard,
@@ -27,6 +29,8 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExpenseCategory, GoalType, Budget, Goal, Income, Expense, Debt, IncomeType } from "@/types/finance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { 
   BarChart, 
   Bar, 
@@ -497,148 +501,33 @@ export default function Dashboard() {
           
           {/* Transactions Tab */}
           <TabsContent value="transactions" className="space-y-4">
+            <h1 className="text-3xl font-bold mb-4">Transactions</h1>
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Income List */}
+              {/* Add Transaction Card */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle>Income</CardTitle>
-                    <CardDescription>Track your revenue sources</CardDescription>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1"
-                    onClick={() => {
-                      setSelectedIncome(undefined);
-                      setIncomeModalOpen(true);
-                    }}
-                  >
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span>Add</span>
-                  </Button>
+                <CardHeader>
+                  <CardTitle>Add Transaction</CardTitle>
+                  <CardDescription>Record a new expense or income</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  {incomes.length > 0 ? (
-                    <div className="space-y-4">
-                      {incomes.map((income) => (
-                        <div 
-                          key={income.id} 
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                          onClick={() => handleIncomeClick(income)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`p-2 rounded-full ${
-                              income.amount > 0 ? (
-                                income.type === IncomeType.Salary ? 'bg-emerald-100' :
-                                income.type === IncomeType.Freelance ? 'bg-emerald-100' :
-                                income.type === IncomeType.Investment ? 'bg-emerald-100' :
-                                income.type === IncomeType.Gift ? 'bg-emerald-100' : 'bg-emerald-100'
-                              ) : (
-                                income.type === IncomeType.Salary ? 'bg-blue-100' :
-                                income.type === IncomeType.Freelance ? 'bg-green-100' :
-                                income.type === IncomeType.Investment ? 'bg-purple-100' :
-                                income.type === IncomeType.Gift ? 'bg-pink-100' : 'bg-gray-100'
-                              )
-                            }`}>
-                              <DollarSign className={`h-4 w-4 ${income.amount > 0 ? 'text-emerald-600' : 'text-primary'}`} />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium">{income.description}</p>
-                              <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <p className={`text-sm font-semibold ${income.amount > 0 ? 'text-emerald-600' : 'text-blue-600'}`}>{formatCurrency(income.amount)}</p>
+                <CardContent className="space-y-6">
+                  {/* Transaction Type Tabs */}
+                  <Tabs defaultValue="expense" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="expense">Expense</TabsTrigger>
+                      <TabsTrigger value="income">Income</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="expense" className="space-y-4 pt-4">
+                      <div className="py-4 text-center">
+                        <div className="mb-4">
+                          <ShoppingBag className="h-12 w-12 mx-auto text-red-500" />
+                          <h3 className="mt-2 text-lg font-medium">Track Your Expenses</h3>
+                          <p className="text-sm text-gray-500">Record purchases, bills, and other spending</p>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10">
-                      <DollarSign className="mx-auto h-10 w-10 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No income entries</h3>
-                      <p className="mt-1 text-sm text-gray-500">Get started by adding your income sources.</p>
-                      <div className="mt-6">
-                        <Button
-                          onClick={() => {
-                            setSelectedIncome(undefined);
-                            setIncomeModalOpen(true);
-                          }}
-                        >
-                          Add Income
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-              
-              {/* Expenses List */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle>Expenses</CardTitle>
-                    <CardDescription>Track your spending</CardDescription>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 gap-1"
-                    onClick={() => {
-                      setSelectedExpense(undefined);
-                      setExpenseModalOpen(true);
-                    }}
-                  >
-                    <PlusCircle className="h-3.5 w-3.5" />
-                    <span>Add</span>
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  {expenses.length > 0 ? (
-                    <div className="space-y-4">
-                      {expenses.map((expense) => (
-                        <div 
-                          key={expense.id} 
-                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
-                          onClick={() => handleExpenseClick(expense)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className={`p-2 rounded-full ${
-                              expense.category === ExpenseCategory.DebtPayments 
-                                ? 'bg-blue-100' 
-                                : 'bg-red-100'
-                            }`}>
-                              {expense.category === ExpenseCategory.DebtPayments ? (
-                                <CreditCard className="h-4 w-4 text-blue-500" />
-                              ) : (
-                                <ShoppingBag className="h-4 w-4 text-red-500" />
-                              )}
-                            </div>
-                            <div>
-                              <div className="flex items-center">
-                                <p className="text-sm font-medium">{expense.description}</p>
-                                {expense.associatedDebtId && (
-                                  <Badge variant="outline" className="ml-2 text-xs">
-                                    {(() => {
-                                      const associatedDebt = debts.find(d => d.id === expense.associatedDebtId);
-                                      return associatedDebt ? `${associatedDebt.name} Payment` : 'Debt Payment';
-                                    })()}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
-                            </div>
-                          </div>
-                          <p className="text-sm font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-10">
-                      <ShoppingBag className="mx-auto h-10 w-10 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900">No expense entries</h3>
-                      <p className="mt-1 text-sm text-gray-500">Start tracking your spending habits.</p>
-                      <div className="mt-6">
-                        <Button
+                        <Button 
+                          className="w-full bg-slate-900" 
+                          size="lg"
                           onClick={() => {
                             setSelectedExpense(undefined);
                             setExpenseModalOpen(true);
@@ -647,6 +536,117 @@ export default function Dashboard() {
                           Add Expense
                         </Button>
                       </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="income" className="space-y-4 pt-4">
+                      <div className="py-4 text-center">
+                        <div className="mb-4">
+                          <DollarSign className="h-12 w-12 mx-auto text-emerald-600" />
+                          <h3 className="mt-2 text-lg font-medium">Record Your Income</h3>
+                          <p className="text-sm text-gray-500">Track your salary, investments, and other earnings</p>
+                        </div>
+                        <Button 
+                          className="w-full" 
+                          size="lg"
+                          onClick={() => {
+                            setSelectedIncome(undefined);
+                            setIncomeModalOpen(true);
+                          }}
+                        >
+                          Add Income
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+              
+              {/* Recent Transactions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Transactions</CardTitle>
+                  <CardDescription>View and manage your recent transactions</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col gap-4">
+                    <Input placeholder="Search transactions..." />
+                    
+                    <div className="flex gap-2">
+                      <Select>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="All Types" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="income">Income</SelectItem>
+                          <SelectItem value="expense">Expense</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Categories</SelectItem>
+                          {Object.values(ExpenseCategory).map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  {/* Combined transactions - shows both expenses and income */}
+                  {expenses.length > 0 || incomes.length > 0 ? (
+                    <div className="space-y-4 mt-4">
+                      {/* Show expenses */}
+                      {expenses.map((expense) => (
+                        <div 
+                          key={expense.id} 
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                          onClick={() => handleExpenseClick(expense)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 rounded-full bg-red-100">
+                              <ShoppingBag className="h-4 w-4 text-red-500" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{expense.description}</p>
+                              <p className="text-xs text-gray-500">{expense.category} • {new Date(expense.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold text-red-600">{formatCurrency(expense.amount)}</p>
+                        </div>
+                      ))}
+                      
+                      {/* Show incomes */}
+                      {incomes.map((income) => (
+                        <div 
+                          key={income.id} 
+                          className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                          onClick={() => handleIncomeClick(income)}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="p-2 rounded-full bg-emerald-100">
+                              <DollarSign className="h-4 w-4 text-emerald-600" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">{income.description}</p>
+                              <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(income.amount)}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-10">
+                      <FileText className="mx-auto h-10 w-10 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
+                      <p className="mt-1 text-sm text-gray-500">Add transactions to see them here.</p>
                     </div>
                   )}
                 </CardContent>
