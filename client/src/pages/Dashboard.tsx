@@ -589,22 +589,6 @@ export default function Dashboard() {
                     <TabsContent value="income">
                       <div className="flex flex-col gap-4">
                         <Input placeholder="Search income..." />
-                        
-                        <div className="flex gap-2">
-                          <Select>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="All Types" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Types</SelectItem>
-                              {Object.values(IncomeType).map((type) => (
-                                <SelectItem key={type} value={type}>
-                                  {type}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
                       
                       {incomes.length > 0 ? (
@@ -644,22 +628,6 @@ export default function Dashboard() {
                     <TabsContent value="expenses">
                       <div className="flex flex-col gap-4">
                         <Input placeholder="Search expenses..." />
-                        
-                        <div className="flex gap-2">
-                          <Select>
-                            <SelectTrigger className="w-[180px]">
-                              <SelectValue placeholder="All Categories" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">All Categories</SelectItem>
-                              {Object.values(ExpenseCategory).map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
                       </div>
                       
                       {expenses.length > 0 ? (
