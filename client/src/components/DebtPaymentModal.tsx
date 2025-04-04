@@ -53,10 +53,11 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     const paymentAmount = values.amount;
     const paymentDate = format(values.date, "yyyy-MM-dd");
     
-    // Update the debt balance
+    // Update the debt balance and track payment
     const updatedDebt = {
       ...debt,
       balance: Math.max(0, debt.balance - paymentAmount),
+      totalPaid: debt.totalPaid + paymentAmount
     };
     
     // Update the debt

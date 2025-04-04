@@ -73,6 +73,8 @@ export interface Debt {
   id: number;
   name: string;
   balance: number;
+  originalPrincipal: number; // Original amount of the debt for progress tracking
+  totalPaid: number; // Total amount paid so far
   interestRate: number;
   minimumPayment: number;
   dueDate: string;

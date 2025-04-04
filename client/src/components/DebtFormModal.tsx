@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils";
 const debtFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
   balance: z.coerce.number().positive("Balance must be greater than 0"),
+  originalPrincipal: z.coerce.number().positive("Original principal must be greater than 0"),
   interestRate: z.coerce.number().min(0, "Interest rate must be 0 or greater"),
   minimumPayment: z.coerce.number().min(0, "Minimum payment must be 0 or greater"),
   dueDate: z.date(),
@@ -60,6 +61,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
       ? {
           name: debt.name,
           balance: debt.balance,
+          originalPrincipal: debt.originalPrincipal,
           interestRate: debt.interestRate,
           minimumPayment: debt.minimumPayment,
           dueDate: new Date(debt.dueDate),
@@ -68,6 +70,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
       : {
           name: "",
           balance: 0,
+          originalPrincipal: 0,
           interestRate: 0,
           minimumPayment: 0,
           dueDate: new Date(),
@@ -84,6 +87,8 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
       minimumPayment: values.minimumPayment,
       dueDate: format(values.dueDate, "yyyy-MM-dd"),
       priority: priority,
+      originalPrincipal: values.originalPrincipal,
+      totalPaid: isEditMode && debt ? debt.totalPaid : 0,
     };
 
     if (isEditMode && debt) {
@@ -148,6 +153,29 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
                         step="0.01"
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              {/* Original Principal field */}
+              <FormField
+                control={form.control}
+                name="originalPrincipal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Original Principal</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="0.00"
+                        {...field}
+                        type="number"
+                        step="0.01"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      The original amount of the debt (used for tracking progress)
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

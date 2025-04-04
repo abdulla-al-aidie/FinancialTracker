@@ -235,17 +235,17 @@ export default function Dashboard() {
         {/* Financial Summary */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {/* Income Card */}
-          <Card>
+          <Card className="border-emerald-200">
             <CardContent className="p-4 flex flex-col">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-gray-500">Total Income</p>
                 <DollarSign className="h-4 w-4 text-emerald-500" />
               </div>
               <div className="mt-1">
-                <p className="text-2xl font-semibold text-gray-900">{formatCurrency(totalIncome)}</p>
+                <p className="text-2xl font-semibold text-emerald-600">{formatCurrency(totalIncome)}</p>
               </div>
               <div className="mt-1 flex items-center">
-                <Badge variant="outline" className="text-emerald-500 text-xs">
+                <Badge variant="outline" className="text-emerald-500 border-emerald-200 text-xs">
                   <TrendingUp className="h-3 w-3 mr-1" /> Income
                 </Badge>
               </div>
@@ -534,19 +534,26 @@ export default function Dashboard() {
                         >
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-full ${
-                              income.type === IncomeType.Salary ? 'bg-blue-100' :
-                              income.type === IncomeType.Freelance ? 'bg-green-100' :
-                              income.type === IncomeType.Investment ? 'bg-purple-100' :
-                              income.type === IncomeType.Gift ? 'bg-pink-100' : 'bg-gray-100'
+                              income.amount > 0 ? (
+                                income.type === IncomeType.Salary ? 'bg-emerald-100' :
+                                income.type === IncomeType.Freelance ? 'bg-emerald-100' :
+                                income.type === IncomeType.Investment ? 'bg-emerald-100' :
+                                income.type === IncomeType.Gift ? 'bg-emerald-100' : 'bg-emerald-100'
+                              ) : (
+                                income.type === IncomeType.Salary ? 'bg-blue-100' :
+                                income.type === IncomeType.Freelance ? 'bg-green-100' :
+                                income.type === IncomeType.Investment ? 'bg-purple-100' :
+                                income.type === IncomeType.Gift ? 'bg-pink-100' : 'bg-gray-100'
+                              )
                             }`}>
-                              <DollarSign className="h-4 w-4 text-primary" />
+                              <DollarSign className={`h-4 w-4 ${income.amount > 0 ? 'text-emerald-600' : 'text-primary'}`} />
                             </div>
                             <div>
                               <p className="text-sm font-medium">{income.description}</p>
                               <p className="text-xs text-gray-500">{income.type} • {new Date(income.date).toLocaleDateString()}</p>
                             </div>
                           </div>
-                          <p className="text-sm font-semibold text-emerald-600">{formatCurrency(income.amount)}</p>
+                          <p className={`text-sm font-semibold ${income.amount > 0 ? 'text-emerald-600' : 'text-blue-600'}`}>{formatCurrency(income.amount)}</p>
                         </div>
                       ))}
                     </div>

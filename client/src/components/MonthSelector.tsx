@@ -128,9 +128,16 @@ export default function MonthSelector() {
         
         {months.length > 1 && (
           <div className="flex flex-wrap gap-2">
-            <Badge variant={comparison.incomeChange >= 0 ? "default" : "destructive"}>
-              Income: {comparison.incomeChange >= 0 ? "+" : ""}{comparison.incomeChange.toFixed(2)}
-            </Badge>
+            {/* Income badge - only turns green when income is added (positive change) */}
+            {comparison.incomeChange > 0 ? (
+              <Badge className="bg-emerald-500 text-white hover:bg-emerald-600">
+                Income: +{comparison.incomeChange.toFixed(2)}
+              </Badge>
+            ) : (
+              <Badge variant={comparison.incomeChange < 0 ? "destructive" : "default"}>
+                Income: {comparison.incomeChange >= 0 ? "+" : ""}{comparison.incomeChange.toFixed(2)}
+              </Badge>
+            )}
             <Badge variant={comparison.expenseChange <= 0 ? "default" : "destructive"}>
               Expenses: {comparison.expenseChange >= 0 ? "+" : ""}{comparison.expenseChange.toFixed(2)}
             </Badge>
