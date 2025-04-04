@@ -43,8 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Format as JSON array of objects with "type", "description", and "impact" fields.
       `;
 
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       const response = await openaiClient.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
         temperature: 0.7
@@ -95,18 +96,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: unknown) {
       console.error("Error calling OpenAI API:", error);
       
+      // Enhanced error logging for debugging
+      if (error instanceof Error) {
+        log(`OpenAI API Error Details: ${error.name}: ${error.message}`);
+        if (error.stack) {
+          log(`Error Stack: ${error.stack.split('\n')[0]}`);
+        }
+      }
+      
       // Check for API key issues
       if (error instanceof Error && 
-          (error.message.includes("API key") || error.message.includes("authentication"))) {
+          (error.message.includes("API key") || error.message.includes("authentication") || 
+           error.message.includes("key") || error.message.includes("auth"))) {
         log("OpenAI API key error detected. Please check your API key configuration.");
+        log("API Key Status: " + (apiKey ? "Key exists but might be invalid" : "Key is missing"));
         return res.status(500).json({
           error: "API Configuration Error",
           message: "There's an issue with the OpenAI API key. Please contact the administrator."
         });
       }
       
+      // Handle rate limit issues
+      if (error instanceof Error && 
+          (error.message.includes("rate") || error.message.includes("limit") || 
+           error.message.includes("quota") || error.message.includes("capacity"))) {
+        log("OpenAI API rate limit exceeded or quota reached.");
+        return res.status(429).json({
+          error: "API Rate Limit",
+          message: "OpenAI API rate limit exceeded. Please try again later."
+        });
+      }
+      
       // Handle other errors
       const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      log(`Fallback recommendations used due to error: ${errorMessage}`);
       res.status(500).json({
         error: "Failed to generate insights",
         message: errorMessage
@@ -127,8 +150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Respond with ONLY the category name.
       `;
 
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
       const response = await openaiClient.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         max_tokens: 20,
       });
@@ -160,8 +184,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Example: { "score": 75, "feedback": "Your savings rate is good, but your debt level is high." }
       `;
 
+      // the newest OpenAI model is "gpt-4o" which was released May 13, 2024
       const response = await openaiClient.chat.completions.create({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o",
         messages: [{ role: "user", content: prompt }],
         response_format: { type: "json_object" },
       });
