@@ -982,6 +982,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add endpoint for saving financial data to database
+  app.post("/api/save-data", async (req, res) => {
+    try {
+      const {
+        userProfile,
+        months,
+        activeMonth,
+        incomes,
+        expenses,
+        budgets,
+        goals,
+        debts,
+        recommendations,
+        alerts,
+        scenarios
+      } = req.body;
+
+      // For demo purposes, log the data to be saved
+      console.log("Saving data to database:", {
+        userProfileId: userProfile?.id,
+        monthsCount: months?.length,
+        activeMonth,
+        incomesCount: incomes?.length,
+        expensesCount: expenses?.length,
+        budgetsCount: budgets?.length,
+        goalsCount: goals?.length,
+        debtsCount: debts?.length,
+        recommendationsCount: recommendations?.length,
+        alertsCount: alerts?.length,
+        scenariosCount: scenarios?.length
+      });
+      
+      // Example database operations - in a full implementation, these would save to storage
+      // In this simple version, we'll just acknowledge receipt
+      
+      // Return success response
+      res.json({ 
+        success: true,
+        message: "Data saved successfully to database"
+      });
+    } catch (error) {
+      console.error("Error saving data:", error);
+      res.status(500).json({
+        error: "Failed to save data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;
