@@ -21,7 +21,7 @@ import {
   UserProfile,
   MonthData
 } from "../types/finance";
-import { getFromDb, listDbKeys, saveToDb } from "../utils/database";
+import { getFromDb, listDbKeys, saveToDb, loadAllFinanceData } from "../utils/database";
 
 // Default user profile
 const DEFAULT_USER_PROFILE: UserProfile = {
@@ -227,6 +227,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   
+  // Loading state
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  
   // Summary calculations
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -234,6 +237,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const [savingsRate, setSavingsRate] = useState(0);
   
   const { toast } = useToast();
+  
+
   
   // Computed properties for current month's data
   const incomes = allIncomes[activeMonth] || [];
@@ -246,6 +251,90 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadInitialData = async () => {
       try {
+        setIsLoading(true);
+        console.log("Loading financial data from database...");
+        
+        // First try to load all data directly from the database
+        try {
+          const data = await loadAllFinanceData();
+          
+          if (data.months && data.months.length > 0) {
+            console.log("Found data in database, loading directly...");
+            
+            // Set shared data
+            if (Object.keys(data.userProfile).length > 0) {
+              setUserProfile({
+                ...DEFAULT_USER_PROFILE,
+                ...data.userProfile,
+                // Ensure nested objects always have their defaults
+                emailNotifications: {
+                  ...DEFAULT_USER_PROFILE.emailNotifications,
+                  ...(data.userProfile.emailNotifications || {})
+                },
+                alertPreferences: {
+                  ...DEFAULT_USER_PROFILE.alertPreferences,
+                  ...(data.userProfile.alertPreferences || {})
+                }
+              });
+            }
+            
+            setMonths(data.months);
+            
+            // Get current month
+            const currentMonthId = getCurrentMonthId();
+            
+            // If current month is not in the data, add it
+            if (!data.months.some((m: any) => m.id === currentMonthId)) {
+              const newMonth: MonthData = {
+                id: currentMonthId,
+                name: getMonthName(currentMonthId),
+                isActive: false
+              };
+              setMonths(prevMonths => [...prevMonths, newMonth]);
+            }
+            
+            // Set active month
+            if (data.months.some((m: any) => m.isActive)) {
+              const activeMonth = data.months.find((m: any) => m.isActive);
+              setActiveMonth(activeMonth.id);
+            } else if (data.months.some((m: any) => m.id === currentMonthId)) {
+              setActiveMonth(currentMonthId);
+            } else {
+              // Sort months and select latest
+              const sortedMonths = [...data.months].sort((a, b) => b.id.localeCompare(a.id));
+              setActiveMonth(sortedMonths[0].id);
+            }
+            
+            // Set monthly data
+            if (Object.keys(data.allIncomes).length > 0) setAllIncomes(data.allIncomes);
+            if (Object.keys(data.allExpenses).length > 0) setAllExpenses(data.allExpenses);
+            if (Object.keys(data.allBudgets).length > 0) setAllBudgets(data.allBudgets);
+            if (Object.keys(data.allGoals).length > 0) setAllGoals(data.allGoals);
+            if (Object.keys(data.allDebts).length > 0) setAllDebts(data.allDebts);
+            
+            // Set other shared data
+            if (data.recommendations.length > 0) setRecommendations(data.recommendations);
+            if (data.alerts.length > 0) setAlerts(data.alerts);
+            if (data.scenarios.length > 0) setScenarios(data.scenarios);
+            
+            console.log("Financial data loaded successfully from database");
+            setIsLoading(false);
+            
+            // Generate initial recommendations and alerts
+            setTimeout(() => {
+              generateInitialRecommendations();
+              checkBudgetAlerts();
+            }, 1000);
+            
+            return; // Exit early, no need to continue with the next block
+          }
+        } catch (dbError) {
+          console.error("Error loading directly from database:", dbError);
+        }
+        
+        // If we reach here, fallback to the original loading method
+        console.log("Falling back to traditional loading method");
+        
         // Load shared data from database or fallback to localStorage
         const userProfileData = await loadData("userProfile");
         const goalsData = await loadData("goals");
@@ -303,11 +392,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           }
         } else {
           // Initialize with current month if no months data available
-          monthsArray = [{ 
+          const newMonth: MonthData = { 
             id: currentMonthId, 
             name: getMonthName(currentMonthId),
             isActive: true
-          }];
+          };
+          monthsArray = [newMonth];
         }
         
         // Always set months and ensure it's saved
@@ -2067,7 +2157,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
 }
 
 // Custom hook for using the finance context
-export function useFinance() {
+// Need to use const for compatibility with React Fast Refresh
+export const useFinance = () => {
   const context = useContext(FinanceContext);
   if (context === undefined) {
     throw new Error("useFinance must be used within a FinanceProvider");

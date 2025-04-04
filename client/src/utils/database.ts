@@ -176,3 +176,93 @@ export const saveFromLocalStorage = async (): Promise<void> => {
     throw error; // Re-throw to allow caller to handle
   }
 };
+
+/**
+ * Loads all data from the database and returns it
+ * @returns Promise that resolves with all the finance data
+ */
+export const loadAllFinanceData = async (): Promise<{
+  userProfile: any;
+  months: any[];
+  allIncomes: Record<string, any[]>;
+  allExpenses: Record<string, any[]>;
+  allBudgets: Record<string, any[]>;
+  allGoals: Record<string, any[]>;
+  allDebts: Record<string, any[]>;
+  recommendations: any[];
+  alerts: any[];
+  scenarios: any[];
+}> => {
+  try {
+    // First, get a list of all keys in the database
+    const allKeys = await listDbKeys();
+    
+    // Create empty objects to store the data
+    const result = {
+      userProfile: {},
+      months: [],
+      allIncomes: {} as Record<string, any[]>,
+      allExpenses: {} as Record<string, any[]>,
+      allBudgets: {} as Record<string, any[]>,
+      allGoals: {} as Record<string, any[]>,
+      allDebts: {} as Record<string, any[]>,
+      recommendations: [],
+      alerts: [],
+      scenarios: []
+    };
+    
+    // Process each key and load the data
+    for (const key of allKeys) {
+      const data = await getFromDb(key);
+      
+      if (!data || !data.ok) continue;
+      
+      const value = data.value;
+      
+      // Handle different types of data
+      if (key === 'userProfile') {
+        result.userProfile = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key === 'months') {
+        result.months = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key === 'scenarios') {
+        result.scenarios = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key === 'recommendations') {
+        result.recommendations = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key === 'alerts') {
+        result.alerts = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key.startsWith('incomes_')) {
+        const monthId = key.replace('incomes_', '');
+        result.allIncomes[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key.startsWith('expenses_')) {
+        const monthId = key.replace('expenses_', '');
+        result.allExpenses[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key.startsWith('budgets_')) {
+        const monthId = key.replace('budgets_', '');
+        result.allBudgets[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key.startsWith('goals_')) {
+        const monthId = key.replace('goals_', '');
+        result.allGoals[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+      } else if (key.startsWith('debts_')) {
+        const monthId = key.replace('debts_', '');
+        result.allDebts[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+      }
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error loading finance data from database:', error);
+    // Return empty defaults
+    return {
+      userProfile: {},
+      months: [],
+      allIncomes: {},
+      allExpenses: {},
+      allBudgets: {},
+      allGoals: {},
+      allDebts: {},
+      recommendations: [],
+      alerts: [],
+      scenarios: []
+    };
+  }
+};
