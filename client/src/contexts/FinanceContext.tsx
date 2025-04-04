@@ -78,6 +78,7 @@ interface FinanceContextType {
   addGoal: (goal: Omit<Goal, "id" | "currentAmount">) => void;
   updateGoal: (goal: Goal) => void;
   deleteGoal: (id: number) => void;
+  addGoalContribution: (contribution: { goalId: number; amount: number; date: string; notes?: string }) => void;
   
   // Debts
   debts: Debt[];
@@ -1057,6 +1058,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ...goal, 
       id: Date.now(),
       currentAmount: 0,
+      monthlyProgress: {},
       priority: goal.priority || 5 // Set default priority to 5 (medium) if not provided
     };
     
@@ -1078,6 +1080,86 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       description: `Your ${goal.type} goal "${goal.name}" has been created`,
       variant: "default"
     });
+  };
+  
+  // Add contribution to a goal
+  const addGoalContribution = (contribution: { goalId: number, amount: number, date: string, notes?: string }) => {
+    // Find the goal to update
+    const goalToUpdate = goals.find(g => g.id === contribution.goalId);
+    
+    if (!goalToUpdate) {
+      toast({
+        title: "Error",
+        description: "Goal not found",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create a copy of the goal's monthly progress
+    const updatedMonthlyProgress = { 
+      ...goalToUpdate.monthlyProgress 
+    };
+    
+    // Add or update the contribution for the current month
+    const currentContribution = updatedMonthlyProgress[activeMonth] || 0;
+    updatedMonthlyProgress[activeMonth] = currentContribution + contribution.amount;
+    
+    // Calculate new current amount (sum of all monthly contributions)
+    const newCurrentAmount = Object.values(updatedMonthlyProgress).reduce((sum, amount) => sum + amount, 0);
+    
+    // Check if goal is now completed
+    const isCompleted = newCurrentAmount >= goalToUpdate.targetAmount;
+    
+    // Create updated goal
+    const updatedGoal: Goal = {
+      ...goalToUpdate,
+      currentAmount: newCurrentAmount,
+      monthlyProgress: updatedMonthlyProgress,
+      completed: isCompleted
+    };
+    
+    // Update goals array
+    const updatedGoals = goals.map(g => g.id === contribution.goalId ? updatedGoal : g);
+    
+    // Update the allGoals state with updated goals for the current month
+    setAllGoals({
+      ...allGoals,
+      [activeMonth]: updatedGoals
+    });
+    
+    // Save to localStorage
+    saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
+    saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
+    
+    // Create expense entry for this contribution
+    addExpense({
+      amount: contribution.amount,
+      category: ExpenseCategory.SavingsAndInvestments,
+      date: contribution.date,
+      description: `Contribution to: ${goalToUpdate.name}${contribution.notes ? ` - ${contribution.notes}` : ''}`,
+    });
+    
+    // Format the amount for the toast
+    const formattedAmount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(contribution.amount);
+    
+    toast({
+      title: "Contribution Added",
+      description: `Added ${formattedAmount} to "${goalToUpdate.name}"`,
+      variant: "default"
+    });
+    
+    // Show completion notification if goal is now completed
+    if (isCompleted) {
+      toast({
+        title: "Goal Completed! 🎉",
+        description: `Congratulations! You've reached your goal: "${goalToUpdate.name}"`,
+        variant: "default"
+      });
+    }
   };
   
   const updateGoal = (goal: Goal) => {
@@ -2108,6 +2190,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         addGoal,
         updateGoal,
         deleteGoal,
+        addGoalContribution,
         
         // Debts
         debts,

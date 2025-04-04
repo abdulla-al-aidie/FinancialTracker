@@ -71,6 +71,7 @@ export interface Goal {
   priority: number; // 1-10 priority ranking, 10 being highest
   associatedDebtId?: number; // For DebtPayoff goals, links to the debt being paid off
   aiRecommendations?: GoalRecommendation[]; // AI-generated recommendations for achieving this goal
+  completed?: boolean; // Whether the goal has been completed (current amount >= target amount)
 }
 
 // AI-Generated Goal Recommendation
