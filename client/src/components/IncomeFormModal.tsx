@@ -20,7 +20,7 @@ const incomeFormSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   date: z.date(),
   type: z.nativeEnum(IncomeType),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().optional(),
 });
 
 type IncomeFormValues = z.infer<typeof incomeFormSchema>;
@@ -54,17 +54,22 @@ export default function IncomeFormModal({ open, onClose, income }: IncomeFormMod
   });
   
   function onSubmit(values: IncomeFormValues) {
+    // Create income data with required fields
+    const incomeData = {
+      date: format(values.date, "yyyy-MM-dd"),
+      amount: values.amount,
+      type: values.type,
+      // Only include description if it's not empty
+      ...(values.description ? { description: values.description } : {})
+    };
+
     if (isEditMode && income) {
       updateIncome({
         ...income,
-        ...values,
-        date: format(values.date, "yyyy-MM-dd"),
+        ...incomeData,
       });
     } else {
-      addIncome({
-        ...values,
-        date: format(values.date, "yyyy-MM-dd"),
-      });
+      addIncome(incomeData);
     }
     
     onClose();

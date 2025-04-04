@@ -8,11 +8,12 @@ import { useFinance } from "@/contexts/FinanceContext";
 import { Debt } from "@/types/finance";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
 const debtFormSchema = z.object({
@@ -21,6 +22,7 @@ const debtFormSchema = z.object({
   interestRate: z.coerce.number().min(0, "Interest rate must be 0 or greater"),
   minimumPayment: z.coerce.number().min(0, "Minimum payment must be 0 or greater"),
   dueDate: z.date(),
+  priority: z.number().min(0).max(10).optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtFormSchema>;
@@ -35,6 +37,11 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
   const { addDebt, updateDebt } = useFinance();
   const isEditMode = !!debt;
   
+  // State for priority slider
+  const [priority, setPriority] = useState<number>(
+    isEditMode && debt && debt.priority !== undefined ? debt.priority : 5
+  );
+
   // Set up form with default values
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtFormSchema),
@@ -45,6 +52,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
           interestRate: debt.interestRate,
           minimumPayment: debt.minimumPayment,
           dueDate: new Date(debt.dueDate),
+          priority: debt.priority !== undefined ? debt.priority : 5,
         }
       : {
           name: "",
@@ -52,6 +60,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
           interestRate: 0,
           minimumPayment: 0,
           dueDate: new Date(),
+          priority: 5,
         },
   });
   
@@ -192,6 +201,40 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
                       />
                     </PopoverContent>
                   </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            {/* Priority field */}
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Priority</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      <Slider
+                        defaultValue={[field.value || 5]}
+                        min={0}
+                        max={10}
+                        step={1}
+                        onValueChange={(values) => {
+                          field.onChange(values[0]);
+                          setPriority(values[0]);
+                        }}
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <div>Low Priority</div>
+                        <div className="font-medium">{field.value || 5}</div>
+                        <div>High Priority</div>
+                      </div>
+                    </div>
+                  </FormControl>
+                  <FormDescription>
+                    Set payment priority to help with debt payment strategies. Higher numbers represent higher priority debts.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

@@ -32,7 +32,7 @@ export interface Income {
   amount: number;
   date: string;
   type: IncomeType;
-  description: string;
+  description?: string;
 }
 
 // Expense Entry
@@ -41,7 +41,7 @@ export interface Expense {
   amount: number;
   date: string;
   category: ExpenseCategory;
-  description: string;
+  description?: string;
 }
 
 // Budget for categories
@@ -76,6 +76,7 @@ export interface Debt {
   interestRate: number;
   minimumPayment: number;
   dueDate: string;
+  priority?: number; // Higher number means higher priority
 }
 
 // AI Recommendation

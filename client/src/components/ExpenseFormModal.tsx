@@ -20,7 +20,7 @@ const expenseFormSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   date: z.date(),
   category: z.nativeEnum(ExpenseCategory),
-  description: z.string().min(1, "Description is required"),
+  description: z.string().optional(),
 });
 
 type ExpenseFormValues = z.infer<typeof expenseFormSchema>;
@@ -64,17 +64,22 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
   }, [watchDescription, isEditMode, categorizeExpense, form]);
   
   function onSubmit(values: ExpenseFormValues) {
+    // Create expense data with required fields
+    const expenseData = {
+      date: format(values.date, "yyyy-MM-dd"),
+      amount: values.amount,
+      category: values.category,
+      // Only include description if it's not empty
+      ...(values.description ? { description: values.description } : {})
+    };
+
     if (isEditMode && expense) {
       updateExpense({
         ...expense,
-        ...values,
-        date: format(values.date, "yyyy-MM-dd"),
+        ...expenseData,
       });
     } else {
-      addExpense({
-        ...values,
-        date: format(values.date, "yyyy-MM-dd"),
-      });
+      addExpense(expenseData);
     }
     
     onClose();
