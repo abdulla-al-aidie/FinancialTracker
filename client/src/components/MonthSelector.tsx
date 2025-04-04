@@ -1,16 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
-import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
-import { format, addMonths, subMonths } from "date-fns";
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
 import { MonthData } from "@/types/finance";
 
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useFinance } from "@/contexts/FinanceContext";
 import { Badge } from "./ui/badge";
 import { 
@@ -22,9 +13,6 @@ import {
 } from "@/components/ui/select";
 
 export default function MonthSelector() {
-  const [calendarDate, setCalendarDate] = useState<Date | undefined>();
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  
   const { 
     months, 
     activeMonth, 
@@ -91,58 +79,13 @@ export default function MonthSelector() {
     setActiveMonth(monthId);
   };
   
-  // Handle custom month selection via calendar
-  const handleAddCustomMonth = () => {
-    if (calendarDate) {
-      addMonth(calendarDate.toISOString());
-      
-      // Update the selected year and month
-      const year = format(calendarDate, "yyyy");
-      const month = format(calendarDate, "MM");
-      setSelectedYear(year);
-      setSelectedMonth(month);
-      
-      setCalendarDate(undefined);
-      setCalendarOpen(false);
-    }
-  };
-  
   // Get comparison with previous month
   const comparison = compareWithPreviousMonth();
   
   return (
     <div className="flex flex-col space-y-4 bg-card p-4 rounded-lg shadow-sm w-full">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center">
         <h2 className="text-xl font-bold">Month Selection</h2>
-        
-        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="justify-start text-left font-normal"
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              Calendar View
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={calendarDate}
-              onSelect={setCalendarDate}
-              initialFocus
-            />
-            <div className="p-3 border-t border-border flex justify-end">
-              <Button 
-                onClick={handleAddCustomMonth} 
-                disabled={!calendarDate}
-                size="sm"
-              >
-                Select Month
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
       </div>
       
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
