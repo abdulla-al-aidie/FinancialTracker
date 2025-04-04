@@ -1,16 +1,20 @@
 // Expense Categories as defined in requirements
 export enum ExpenseCategory {
-  Housing = "Housing",
+  RentOrMortgage = "Rent or Mortgage",
+  Utilities = "Utilities",
+  InternetAndPhone = "Internet and Phone Bill",
+  Insurance = "Insurance",
+  Groceries = "Groceries",
   Transportation = "Transportation",
-  Food = "Food",
-  Healthcare = "Healthcare",
-  Insurance = "Insurance & Personal Protection",
-  Debt = "Debt & Loans",
-  Personal = "Personal & Family",
-  Entertainment = "Entertainment & Leisure",
-  Gifts = "Gifts & Charity",
-  Education = "Education & Professional Development",
-  Miscellaneous = "Miscellaneous & Other"
+  DebtPayments = "Debt Payments",
+  SubscriptionsAndMemberships = "Subscriptions and Memberships",
+  ChildcareOrTuition = "Childcare or Tuition",
+  MedicalAndHealth = "Medical and Health Expenses",
+  PersonalCareAndClothing = "Personal Care and Clothing",
+  SavingsAndInvestments = "Savings and Investments",
+  EntertainmentAndDining = "Entertainment and Dining Out",
+  PetExpenses = "Pet Expenses",
+  Miscellaneous = "Miscellaneous or Emergency Fund"
 }
 
 // Income Types

@@ -380,35 +380,50 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const categorizeExpense = (description: string): ExpenseCategory => {
     description = description.toLowerCase();
     
-    // Simple keyword matching (would be replaced by a more sophisticated ML model)
-    if (description.includes("rent") || description.includes("mortgage") || description.includes("house"))
-      return ExpenseCategory.Housing;
+    // Simple keyword matching for the new categories
+    if (description.includes("rent") || description.includes("mortgage") || description.includes("apartment"))
+      return ExpenseCategory.RentOrMortgage;
       
-    if (description.includes("car") || description.includes("gas") || description.includes("uber") || description.includes("lyft"))
-      return ExpenseCategory.Transportation;
+    if (description.includes("electricity") || description.includes("water") || description.includes("gas bill") || description.includes("utility"))
+      return ExpenseCategory.Utilities;
       
-    if (description.includes("grocery") || description.includes("restaurant") || description.includes("food"))
-      return ExpenseCategory.Food;
+    if (description.includes("internet") || description.includes("phone") || description.includes("wifi") || description.includes("cell"))
+      return ExpenseCategory.InternetAndPhone;
       
-    if (description.includes("doctor") || description.includes("hospital") || description.includes("medicine"))
-      return ExpenseCategory.Healthcare;
-      
-    if (description.includes("insurance"))
+    if (description.includes("insurance") || description.includes("coverage") || description.includes("policy"))
       return ExpenseCategory.Insurance;
       
-    if (description.includes("loan") || description.includes("debt") || description.includes("credit"))
-      return ExpenseCategory.Debt;
+    if (description.includes("grocery") || description.includes("supermarket") || description.includes("food") || description.includes("produce"))
+      return ExpenseCategory.Groceries;
       
-    if (description.includes("movie") || description.includes("entertainment") || description.includes("game"))
-      return ExpenseCategory.Entertainment;
+    if (description.includes("car") || description.includes("gas") || description.includes("uber") || description.includes("lyft") || description.includes("bus") || description.includes("train"))
+      return ExpenseCategory.Transportation;
       
-    if (description.includes("gift") || description.includes("donation") || description.includes("charity"))
-      return ExpenseCategory.Gifts;
+    if (description.includes("loan") || description.includes("debt") || description.includes("credit card") || description.includes("payment"))
+      return ExpenseCategory.DebtPayments;
       
-    if (description.includes("course") || description.includes("tuition") || description.includes("book"))
-      return ExpenseCategory.Education;
+    if (description.includes("netflix") || description.includes("spotify") || description.includes("subscription") || description.includes("membership") || description.includes("gym"))
+      return ExpenseCategory.SubscriptionsAndMemberships;
       
-    // Default to miscellaneous if no match
+    if (description.includes("childcare") || description.includes("daycare") || description.includes("tuition") || description.includes("school"))
+      return ExpenseCategory.ChildcareOrTuition;
+      
+    if (description.includes("doctor") || description.includes("hospital") || description.includes("medicine") || description.includes("medical") || description.includes("health"))
+      return ExpenseCategory.MedicalAndHealth;
+      
+    if (description.includes("clothing") || description.includes("haircut") || description.includes("salon") || description.includes("personal care"))
+      return ExpenseCategory.PersonalCareAndClothing;
+      
+    if (description.includes("savings") || description.includes("investment") || description.includes("stock") || description.includes("retirement"))
+      return ExpenseCategory.SavingsAndInvestments;
+      
+    if (description.includes("restaurant") || description.includes("dining") || description.includes("movie") || description.includes("entertainment") || description.includes("concert"))
+      return ExpenseCategory.EntertainmentAndDining;
+      
+    if (description.includes("pet") || description.includes("vet") || description.includes("dog") || description.includes("cat") || description.includes("animal"))
+      return ExpenseCategory.PetExpenses;
+      
+    // Default to Miscellaneous
     return ExpenseCategory.Miscellaneous;
   };
   
