@@ -71,7 +71,8 @@ export default function Dashboard() {
     debts,
     recommendations,
     alerts,
-    deleteDebt
+    deleteDebt,
+    activeMonth
   } = useFinance();
   
   const [activeTab, setActiveTab] = useState("overview");
@@ -133,7 +134,7 @@ export default function Dashboard() {
   const unreadAlerts = alerts.filter(alert => !alert.isRead);
   
   // Get active month data for the chart
-  const { activeMonth, months } = useFinance();
+  const { months } = useFinance();
   const activeMonthName = months.find(month => month.id === activeMonth)?.name || 'Current Month';
   
   // Prepare cashflow data for the active month only
@@ -708,13 +709,25 @@ export default function Dashboard() {
                               className="h-1.5" 
                             />
                             
-
+                            {/* Show month-specific payment information if available */}
+                            {debt.monthlyPayments && debt.monthlyPayments[activeMonth] !== undefined && (
+                              <div className="text-xs text-right mt-1 text-gray-500">
+                                Paid this month: {formatCurrency(debt.monthlyPayments[activeMonth])}
+                              </div>
+                            )}
                           </div>
                           
                           <div className="mt-3 grid grid-cols-2 gap-4">
                             <div>
                               <p className="text-xs text-gray-500">Current Balance</p>
-                              <p className="text-sm font-medium">{formatCurrency(debt.balance)}</p>
+                              <p className="text-sm font-medium">
+                                {formatCurrency(
+                                  // Use month-specific balance if available, otherwise use overall balance
+                                  debt.monthlyBalances && debt.monthlyBalances[activeMonth] !== undefined 
+                                    ? debt.monthlyBalances[activeMonth] 
+                                    : debt.balance
+                                )}
+                              </p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">Minimum Payment</p>
@@ -798,13 +811,19 @@ export default function Dashboard() {
                             <div className="text-right">
                               <p className="text-sm text-gray-500">Target: {formatCurrency(goal.targetAmount)}</p>
                               <p className="text-sm font-medium">
-                                {formatCurrency(goal.currentAmount)} saved
+                                {formatCurrency(goal.currentAmount)} total saved
                               </p>
+                              {/* Show month-specific progress if available */}
+                              {goal.monthlyProgress && goal.monthlyProgress[activeMonth] !== undefined && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {formatCurrency(goal.monthlyProgress[activeMonth])} this month
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="mt-3">
                             <div className="flex justify-between text-xs mb-1">
-                              <span>Progress</span>
+                              <span>Overall Progress</span>
                               <span>{((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%</span>
                             </div>
                             <Progress value={(goal.currentAmount / goal.targetAmount) * 100} className="h-2" />
