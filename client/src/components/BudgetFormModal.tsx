@@ -91,8 +91,8 @@ export default function BudgetFormModal({ open, onClose, budget }: BudgetFormMod
   };
   
   // Calculate current spending in this category
-  const currentSpending = isEditMode && budget
-    ? budget.currentAmount || 0
+  const currentSpending = isEditMode && budget && 'spent' in budget
+    ? (budget as any).spent || 0
     : 0;
   
   // Calculate the percentage of budget used
