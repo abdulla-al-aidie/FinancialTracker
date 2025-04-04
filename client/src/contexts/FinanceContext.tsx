@@ -1029,14 +1029,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       isActive: false
     };
     
+    // Update months array
+    const updatedMonths = [...months, newMonth];
+    setMonths(updatedMonths);
+    
+    // Save updated months to localStorage
+    localStorage.setItem("months", JSON.stringify(updatedMonths));
+    
     // Find a previous month to copy data from
-    const monthsWithData = Object.keys(allBudgets);
-    if (monthsWithData.length > 0) {
-      // Sort months and get the most recent one
-      const mostRecentMonth = monthsWithData.sort().pop();
+    const sortedMonths = [...months.map(m => m.id)].sort();
+    if (sortedMonths.length > 0) {
+      // Get the most recent month that comes before this new month
+      const previousMonths = sortedMonths.filter(m => m < monthId);
+      const mostRecentMonth = previousMonths.length > 0 ? previousMonths[previousMonths.length - 1] : null;
+      
       if (mostRecentMonth) {
-        // 1. Copy budgets but reset spent amount
-        if (!allBudgets[monthId]) {
+        // Use propagateMonthData to copy all relevant data from the previous month
+        propagateMonthData(mostRecentMonth, monthId);
+        
+        // Also copy budgets but reset spent amount, since propagateMonthData doesn't handle budgets
+        if (!allBudgets[monthId] && allBudgets[mostRecentMonth]) {
           const newBudgets = allBudgets[mostRecentMonth].map(budget => ({
             ...budget,
             spent: 0
@@ -1049,51 +1061,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           // Save to localStorage
           localStorage.setItem(`budgets_${monthId}`, JSON.stringify(newBudgets));
         }
-        
-        // 2. Copy goals and carry forward their progress
-        if (!allGoals[monthId]) {
-          // If there are goals in the previous month, copy them forward
-          if (allGoals[mostRecentMonth] && allGoals[mostRecentMonth].length > 0) {
-            const newGoals = allGoals[mostRecentMonth];
-            setAllGoals({
-              ...allGoals,
-              [monthId]: newGoals
-            });
-            
-            // Save to localStorage
-            localStorage.setItem(`goals_${monthId}`, JSON.stringify(newGoals));
-          }
-        }
-        
-        // 3. Copy debts with their updated balances
-        if (!allDebts[monthId]) {
-          // If there are debts in the previous month, copy them forward
-          if (allDebts[mostRecentMonth] && allDebts[mostRecentMonth].length > 0) {
-            const newDebts = allDebts[mostRecentMonth];
-            setAllDebts({
-              ...allDebts,
-              [monthId]: newDebts
-            });
-            
-            // Save to localStorage
-            localStorage.setItem(`debts_${monthId}`, JSON.stringify(newDebts));
-          }
-        }
       }
     }
-    
-    // Update months array
-    const updatedMonths = [...months, newMonth];
-    setMonths(updatedMonths);
-    
-    // Save updated months to localStorage
-    localStorage.setItem("months", JSON.stringify(updatedMonths));
     
     toast({
       title: "Month Added",
       description: `${getMonthName(monthId)} has been added to your tracking`,
       variant: "default"
     });
+    
+    // Set as active
+    setActiveMonthHandler(monthId);
   };
   
   const compareWithPreviousMonth = () => {
@@ -1489,7 +1467,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Method to update future months with current goals and debts
+  // Function to propagate data forward when switching months or creating new months
   const updateFutureMonths = async () => {
     // Get all months that come after the active month
     const futureMonths = months
@@ -1506,30 +1484,98 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // Get current month's goals and debts
-    const currentGoals = goals;
-    const currentDebts = debts;
-    
-    // For each future month, update its goals and debts
+    // For each future month, update it based on the active month
     for (const monthId of futureMonths) {
-      // Update goals for this future month
-      setAllGoals(prev => ({
-        ...prev,
-        [monthId]: currentGoals
-      }));
-      
-      // Save to localStorage
-      localStorage.setItem(`goals_${monthId}`, JSON.stringify(currentGoals));
-      
-      // Update debts for this future month
-      setAllDebts(prev => ({
-        ...prev,
-        [monthId]: currentDebts
-      }));
-      
-      // Save to localStorage
-      localStorage.setItem(`debts_${monthId}`, JSON.stringify(currentDebts));
+      propagateMonthData(activeMonth, monthId);
     }
+    
+    toast({
+      title: "Future Months Updated",
+      description: `Successfully updated ${futureMonths.length} future month(s) with current data.`,
+      variant: "default"
+    });
+  };
+  
+  // Helper function to propagate data from one month to another
+  const propagateMonthData = (sourceMonthId: string, targetMonthId: string) => {
+    if (!sourceMonthId || !targetMonthId || sourceMonthId >= targetMonthId) {
+      // Don't propagate to the past or the same month
+      return;
+    }
+    
+    // 1. Propagate Goals
+    // Get source month goals
+    const sourceGoals = allGoals[sourceMonthId] || [];
+    // Get target month goals or initialize empty array
+    const targetGoals = allGoals[targetMonthId] || [];
+    
+    // For each goal in source month, update or create in target month
+    const updatedTargetGoals = sourceGoals.map(sourceGoal => {
+      // Find matching goal in target month if it exists
+      const existingGoal = targetGoals.find(g => g.id === sourceGoal.id);
+      
+      if (existingGoal) {
+        // Preserve the target month's monthly progress data
+        return {
+          ...sourceGoal,
+          monthlyProgress: {
+            ...sourceGoal.monthlyProgress,
+            ...existingGoal.monthlyProgress
+          }
+        };
+      } else {
+        // Goal doesn't exist in target month, copy it with its progress
+        return sourceGoal;
+      }
+    });
+    
+    // Update goals for target month
+    setAllGoals(prev => ({
+      ...prev,
+      [targetMonthId]: updatedTargetGoals
+    }));
+    
+    // Save to localStorage
+    localStorage.setItem(`goals_${targetMonthId}`, JSON.stringify(updatedTargetGoals));
+    
+    // 2. Propagate Debts
+    // Get source month debts
+    const sourceDebts = allDebts[sourceMonthId] || [];
+    // Get target month debts or initialize empty array
+    const targetDebts = allDebts[targetMonthId] || [];
+    
+    // For each debt in source month, update or create in target month
+    const updatedTargetDebts = sourceDebts.map(sourceDebt => {
+      // Find matching debt in target month if it exists
+      const existingDebt = targetDebts.find(d => d.id === sourceDebt.id);
+      
+      if (existingDebt) {
+        // Preserve the target month's monthly payments and balances
+        return {
+          ...sourceDebt,
+          monthlyPayments: {
+            ...sourceDebt.monthlyPayments,
+            ...existingDebt.monthlyPayments
+          },
+          monthlyBalances: {
+            ...sourceDebt.monthlyBalances,
+            ...existingDebt.monthlyBalances
+          }
+        };
+      } else {
+        // Debt doesn't exist in target month, copy it with its payments/balances
+        return sourceDebt;
+      }
+    });
+    
+    // Update debts for target month
+    setAllDebts(prev => ({
+      ...prev,
+      [targetMonthId]: updatedTargetDebts
+    }));
+    
+    // Save to localStorage
+    localStorage.setItem(`debts_${targetMonthId}`, JSON.stringify(updatedTargetDebts));
   };
   
   // User profile management

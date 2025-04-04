@@ -56,7 +56,6 @@ import AIGoalPrioritization from "@/components/AIGoalPrioritization";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
-import UpdateFutureMonthsButton from "@/components/UpdateFutureMonthsButton";
 
 
 export default function Dashboard() {
@@ -356,11 +355,8 @@ export default function Dashboard() {
           
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-4">
-            {/* Month Selector and Update Button */}
-            <div className="flex justify-between items-center">
-              <MonthSelector />
-              <UpdateFutureMonthsButton />
-            </div>
+            {/* Month Selector */}
+            <MonthSelector />
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Expense Breakdown Chart */}
