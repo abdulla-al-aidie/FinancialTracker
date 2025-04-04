@@ -129,23 +129,47 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + values.amount
         };
         
-        // Calculate new balance
-        const newBalance = Math.max(0, debtToUpdate.balance - values.amount);
+        // Get the current month's starting balance or use the overall balance as fallback
+        let startingBalanceForMonth = debtToUpdate.balance;
+        
+        // Look for the previous month's balance as starting point
+        const monthParts = paymentMonthId.split('-');
+        let prevYear = parseInt(monthParts[0]);
+        let prevMonth = parseInt(monthParts[1]) - 1;
+        
+        if (prevMonth === 0) {
+          prevMonth = 12;
+          prevYear -= 1;
+        }
+        
+        const prevMonthId = `${prevYear}-${prevMonth.toString().padStart(2, '0')}`;
         
         // Initialize monthly balances if it doesn't exist
         const currentMonthlyBalances = debtToUpdate.monthlyBalances || {};
         
-        // Update the monthly balances record
+        // If we have a balance for the previous month, use that as our starting point
+        if (currentMonthlyBalances[prevMonthId] !== undefined) {
+          startingBalanceForMonth = currentMonthlyBalances[prevMonthId];
+        }
+        
+        // Calculate new month-specific balance
+        // Starting balance minus the current month's payments (including this one)
+        const newMonthBalance = Math.max(0, startingBalanceForMonth - 
+          (updatedMonthlyPayments[paymentMonthId] || 0));
+        
+        // Update the monthly balances record - ONLY for this month
         const updatedMonthlyBalances = {
           ...currentMonthlyBalances,
-          [paymentMonthId]: newBalance // Store the end-of-month balance
+          [paymentMonthId]: newMonthBalance
         };
         
-        // Update the debt with reduced balance and tracked payment
+        // Calculate month-specific payments for tracking purposes
+        const monthlyPaymentAmount = updatedMonthlyPayments[paymentMonthId] || 0;
+        
+        // Update the debt with ONLY month-specific changes
+        // Do NOT update the main balance field which affects all months
         const updatedDebt = {
           ...debtToUpdate,
-          balance: newBalance,
-          totalPaid: (debtToUpdate.totalPaid || 0) + values.amount,
           monthlyPayments: updatedMonthlyPayments,
           monthlyBalances: updatedMonthlyBalances
         };
@@ -203,11 +227,10 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           // Get the month of the original payment
           const paymentMonthId = expense.date.substring(0, 7);
           
-          // Reverse the payment on the old debt
+          // Reverse the payment on the old debt - ONLY for the specific month
           const updatedDebt = {
-            ...debtToReverse,
-            balance: debtToReverse.balance + expense.amount,
-            totalPaid: Math.max(0, debtToReverse.totalPaid - expense.amount)
+            ...debtToReverse
+            // Remove balance and totalPaid updates - we no longer update these
           };
           
           // Update monthly payment tracking if possible
@@ -299,11 +322,10 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           // Get the month of the payment
           const paymentMonthId = expense.date.substring(0, 7);
           
-          // Reverse the payment impact on the debt
+          // Reverse the payment impact on the debt - ONLY for the specific month
           const updatedDebt = {
-            ...debtToUpdate,
-            balance: debtToUpdate.balance + expense.amount,
-            totalPaid: Math.max(0, debtToUpdate.totalPaid - expense.amount)
+            ...debtToUpdate
+            // No longer update the main balance field
           };
           
           // Update monthly payment tracking if possible
