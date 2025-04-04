@@ -44,6 +44,7 @@ import GoalFormModal from "@/components/GoalFormModal";
 import IncomeFormModal from "@/components/IncomeFormModal";
 import ExpenseFormModal from "@/components/ExpenseFormModal";
 import DebtFormModal from "@/components/DebtFormModal";
+import DebtPaymentModal from "@/components/DebtPaymentModal";
 import ProfileModal from "@/components/ProfileModal";
 import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
@@ -73,6 +74,7 @@ export default function Dashboard() {
   const [incomeModalOpen, setIncomeModalOpen] = useState(false);
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [debtModalOpen, setDebtModalOpen] = useState(false);
+  const [debtPaymentModalOpen, setDebtPaymentModalOpen] = useState(false);
   
   // State for settings modals
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -171,6 +173,12 @@ export default function Dashboard() {
   const handleDebtClick = (debt: Debt) => {
     setSelectedDebt(debt);
     setDebtModalOpen(true);
+  };
+  
+  // Handler for debt payment
+  const handleDebtPayment = (debt: Debt) => {
+    setSelectedDebt(debt);
+    setDebtPaymentModalOpen(true);
   };
   
   // Handler for generating monthly financial report
@@ -659,6 +667,20 @@ export default function Dashboard() {
                               <p className="text-sm font-medium">{formatCurrency(debt.minimumPayment)}</p>
                             </div>
                           </div>
+                          <div className="mt-3 border-t pt-3 flex justify-end">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="gap-1"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent parent click event (edit debt)
+                                handleDebtPayment(debt);
+                              }}
+                            >
+                              <DollarSign className="h-3.5 w-3.5" />
+                              <span>Make Payment</span>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -957,6 +979,15 @@ export default function Dashboard() {
         onClose={() => setDebtModalOpen(false)}
         debt={selectedDebt}
       />
+      
+      {/* Debt Payment Modal */}
+      {selectedDebt && (
+        <DebtPaymentModal
+          open={debtPaymentModalOpen}
+          onClose={() => setDebtPaymentModalOpen(false)}
+          debt={selectedDebt}
+        />
+      )}
       
       {/* Settings Modals */}
       <ProfileModal
