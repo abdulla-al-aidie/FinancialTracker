@@ -205,7 +205,17 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     // Load shared data that persists across months
     if (savedUserProfile) setUserProfile(JSON.parse(savedUserProfile));
-    if (savedGoals) setGoals(JSON.parse(savedGoals));
+    if (savedGoals) {
+      // Parse the goals and ensure they all have a priority
+      const loadedGoals = JSON.parse(savedGoals);
+      const goalsWithPriority = loadedGoals.map((goal: Goal) => ({
+        ...goal,
+        priority: goal.priority !== undefined ? goal.priority : 5 // Set default priority if missing
+      }));
+      setGoals(goalsWithPriority);
+      // Save back to ensure all goals have priorities
+      localStorage.setItem("goals", JSON.stringify(goalsWithPriority));
+    }
     if (savedDebts) setDebts(JSON.parse(savedDebts));
     if (savedScenarios) setScenarios(JSON.parse(savedScenarios));
     
@@ -747,7 +757,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     const newGoal: Goal = { 
       ...goal, 
       id: Date.now(),
-      currentAmount: 0
+      currentAmount: 0,
+      priority: goal.priority || 5 // Set default priority to 5 (medium) if not provided
     };
     const updatedGoals = [...goals, newGoal];
     setGoals(updatedGoals);

@@ -93,14 +93,15 @@ export default function AIGoalPrioritization() {
 
   // Function to render priority badge with appropriate color
   const renderPriorityBadge = (priority: number | undefined) => {
-    if (!priority) return <Badge variant="outline">No Priority</Badge>;
+    // Set default priority to 5 (medium) if not explicitly set
+    const priorityValue = priority !== undefined ? priority : 5;
     
-    if (priority >= 8) {
-      return <Badge className="bg-red-500 hover:bg-red-600">Critical Priority: {priority}/10</Badge>;
-    } else if (priority >= 5) {
-      return <Badge className="bg-amber-500 hover:bg-amber-600">Medium Priority: {priority}/10</Badge>;
+    if (priorityValue >= 8) {
+      return <Badge className="bg-red-500 hover:bg-red-600">Critical Priority: {priorityValue}/10</Badge>;
+    } else if (priorityValue >= 5) {
+      return <Badge className="bg-amber-500 hover:bg-amber-600">Medium Priority: {priorityValue}/10</Badge>;
     } else {
-      return <Badge className="bg-green-500 hover:bg-green-600">Low Priority: {priority}/10</Badge>;
+      return <Badge className="bg-green-500 hover:bg-green-600">Low Priority: {priorityValue}/10</Badge>;
     }
   };
 
