@@ -111,6 +111,9 @@ interface FinanceContextType {
   checkBudgetAlerts: () => void;
   compareWithPreviousMonth: () => { incomeChange: number; expenseChange: number; savingsChange: number };
   
+  // Month data propagation
+  updateFutureMonths: () => Promise<void>;
+  
   // AI Goal Optimization features
   prioritizeGoalsWithAI: () => Promise<void>;
   getGoalRecommendations: (goalId: number) => Promise<{
@@ -1486,6 +1489,49 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
   
+  // Method to update future months with current goals and debts
+  const updateFutureMonths = async () => {
+    // Get all months that come after the active month
+    const futureMonths = months
+      .filter(month => month.id > activeMonth)
+      .map(month => month.id)
+      .sort();
+    
+    if (futureMonths.length === 0) {
+      toast({
+        title: "No Future Months",
+        description: "There are no future months to update. Add a new month first.",
+        variant: "default"
+      });
+      return;
+    }
+    
+    // Get current month's goals and debts
+    const currentGoals = goals;
+    const currentDebts = debts;
+    
+    // For each future month, update its goals and debts
+    for (const monthId of futureMonths) {
+      // Update goals for this future month
+      setAllGoals(prev => ({
+        ...prev,
+        [monthId]: currentGoals
+      }));
+      
+      // Save to localStorage
+      localStorage.setItem(`goals_${monthId}`, JSON.stringify(currentGoals));
+      
+      // Update debts for this future month
+      setAllDebts(prev => ({
+        ...prev,
+        [monthId]: currentDebts
+      }));
+      
+      // Save to localStorage
+      localStorage.setItem(`debts_${monthId}`, JSON.stringify(currentDebts));
+    }
+  };
+  
   // User profile management
   const updateUserProfile = (profile: UserProfile) => {
     setUserProfile(profile);
@@ -1566,6 +1612,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         generateRecommendations,
         checkBudgetAlerts,
         compareWithPreviousMonth,
+        
+        // Month data propagation
+        updateFutureMonths,
         
         // AI Goal Optimization features
         prioritizeGoalsWithAI,
