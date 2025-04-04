@@ -64,12 +64,25 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + paymentAmount
     };
     
+    // Initialize monthly balances if it doesn't exist
+    const currentMonthlyBalances = debt.monthlyBalances || {};
+    
+    // Calculate new balance
+    const newBalance = Math.max(0, debt.balance - paymentAmount);
+    
+    // Update the monthly balances record
+    const updatedMonthlyBalances = {
+      ...currentMonthlyBalances,
+      [paymentMonthId]: newBalance // Store the end-of-month balance
+    };
+    
     // Update the debt balance and track payment
     const updatedDebt = {
       ...debt,
-      balance: Math.max(0, debt.balance - paymentAmount),
+      balance: newBalance,
       totalPaid: debt.totalPaid + paymentAmount,
-      monthlyPayments: updatedMonthlyPayments
+      monthlyPayments: updatedMonthlyPayments,
+      monthlyBalances: updatedMonthlyBalances
     };
     
     // Update the debt
@@ -86,9 +99,24 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     
     // If there's a related goal and user wants to apply payment to goal
     if (relatedGoal && values.applyToGoal) {
+      // Initialize monthly progress if it doesn't exist
+      const goalMonthlyProgress = relatedGoal.monthlyProgress || {};
+      
+      // Add payment to monthly goal progress
+      const updatedGoalMonthlyProgress = {
+        ...goalMonthlyProgress,
+        [paymentMonthId]: (goalMonthlyProgress[paymentMonthId] || 0) + paymentAmount
+      };
+      
+      // Calculate new total progress (sum of all monthly progress)
+      const newTotalProgress = Object.values(updatedGoalMonthlyProgress).reduce(
+        (sum, value) => sum + value, 0
+      );
+      
       updateGoal({
         ...relatedGoal,
-        currentAmount: Math.min(relatedGoal.targetAmount, relatedGoal.currentAmount + paymentAmount),
+        currentAmount: Math.min(relatedGoal.targetAmount, newTotalProgress),
+        monthlyProgress: updatedGoalMonthlyProgress
       });
     }
     

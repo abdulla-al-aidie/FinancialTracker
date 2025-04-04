@@ -98,6 +98,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
       originalPrincipal: values.originalPrincipal,
       totalPaid: isEditMode && debt ? debt.totalPaid : 0,
       monthlyPayments: isEditMode && debt ? debt.monthlyPayments : {},
+      monthlyBalances: isEditMode && debt ? debt.monthlyBalances : {},
     };
 
     if (isEditMode && debt) {

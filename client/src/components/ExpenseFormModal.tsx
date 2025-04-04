@@ -114,12 +114,25 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + values.amount
         };
         
+        // Calculate new balance
+        const newBalance = Math.max(0, debtToUpdate.balance - values.amount);
+        
+        // Initialize monthly balances if it doesn't exist
+        const currentMonthlyBalances = debtToUpdate.monthlyBalances || {};
+        
+        // Update the monthly balances record
+        const updatedMonthlyBalances = {
+          ...currentMonthlyBalances,
+          [paymentMonthId]: newBalance // Store the end-of-month balance
+        };
+        
         // Update the debt with reduced balance and tracked payment
         const updatedDebt = {
           ...debtToUpdate,
-          balance: Math.max(0, debtToUpdate.balance - values.amount),
+          balance: newBalance,
           totalPaid: (debtToUpdate.totalPaid || 0) + values.amount,
-          monthlyPayments: updatedMonthlyPayments
+          monthlyPayments: updatedMonthlyPayments,
+          monthlyBalances: updatedMonthlyBalances
         };
         
         // Update the debt
@@ -134,11 +147,26 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
                  goal.name.includes(debtToUpdate.name)
         );
         
-        // If there's a related goal, update its progress
+        // If there's a related goal, update its progress by month
         if (relatedGoal) {
+          // Initialize monthly progress if it doesn't exist
+          const goalMonthlyProgress = relatedGoal.monthlyProgress || {};
+          
+          // Add payment to monthly goal progress
+          const updatedGoalMonthlyProgress = {
+            ...goalMonthlyProgress,
+            [paymentMonthId]: (goalMonthlyProgress[paymentMonthId] || 0) + values.amount
+          };
+          
+          // Calculate new total progress (sum of all monthly progress)
+          const newTotalProgress = Object.values(updatedGoalMonthlyProgress).reduce(
+            (sum, value) => sum + value, 0
+          );
+          
           updateGoal({
             ...relatedGoal,
-            currentAmount: Math.min(relatedGoal.targetAmount, relatedGoal.currentAmount + values.amount),
+            currentAmount: Math.min(relatedGoal.targetAmount, newTotalProgress),
+            monthlyProgress: updatedGoalMonthlyProgress
           });
         }
       }
@@ -157,6 +185,9 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
         const debtToReverse = debts.find(debt => debt.id === oldDebtId);
         
         if (debtToReverse) {
+          // Get the month of the original payment
+          const paymentMonthId = expense.date.substring(0, 7);
+          
           // Reverse the payment on the old debt
           const updatedDebt = {
             ...debtToReverse,
@@ -166,7 +197,6 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // Update monthly payment tracking if possible
           if (debtToReverse.monthlyPayments) {
-            const paymentMonthId = expense.date.substring(0, 7);
             const currentMonthlyPayments = { ...debtToReverse.monthlyPayments };
             
             if (currentMonthlyPayments[paymentMonthId]) {
@@ -177,6 +207,19 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
             }
             
             updatedDebt.monthlyPayments = currentMonthlyPayments;
+          }
+          
+          // Update monthly balance tracking if possible
+          if (debtToReverse.monthlyBalances) {
+            const currentMonthlyBalances = { ...debtToReverse.monthlyBalances };
+            
+            // Update the balance for the month this expense occurred in
+            if (currentMonthlyBalances[paymentMonthId] !== undefined) {
+              currentMonthlyBalances[paymentMonthId] = 
+                currentMonthlyBalances[paymentMonthId] + expense.amount;
+            }
+            
+            updatedDebt.monthlyBalances = currentMonthlyBalances;
           }
           
           // Update the debt with reversed payment
@@ -193,9 +236,25 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // If there's a related goal, update its progress by removing the amount
           if (relatedGoal) {
+            // Update monthly progress tracking
+            const monthlyProgress = { ...relatedGoal.monthlyProgress };
+            
+            if (monthlyProgress[paymentMonthId]) {
+              monthlyProgress[paymentMonthId] = Math.max(
+                0,
+                monthlyProgress[paymentMonthId] - expense.amount
+              );
+            }
+            
+            // Recalculate total progress
+            const newTotalProgress = Object.values(monthlyProgress).reduce(
+              (sum, value) => sum + value, 0
+            );
+            
             updateGoal({
               ...relatedGoal,
-              currentAmount: Math.max(0, relatedGoal.currentAmount - expense.amount),
+              currentAmount: Math.max(0, newTotalProgress),
+              monthlyProgress: monthlyProgress
             });
           }
         }
@@ -222,6 +281,9 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
         const debtToUpdate = debts.find(debt => debt.id === debtId);
         
         if (debtToUpdate) {
+          // Get the month of the payment
+          const paymentMonthId = expense.date.substring(0, 7);
+          
           // Reverse the payment impact on the debt
           const updatedDebt = {
             ...debtToUpdate,
@@ -231,7 +293,6 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // Update monthly payment tracking if possible
           if (debtToUpdate.monthlyPayments) {
-            const paymentMonthId = expense.date.substring(0, 7);
             const currentMonthlyPayments = { ...debtToUpdate.monthlyPayments };
             
             if (currentMonthlyPayments[paymentMonthId]) {
@@ -242,6 +303,19 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
             }
             
             updatedDebt.monthlyPayments = currentMonthlyPayments;
+          }
+          
+          // Update monthly balance tracking if possible
+          if (debtToUpdate.monthlyBalances) {
+            const currentMonthlyBalances = { ...debtToUpdate.monthlyBalances };
+            
+            // Update the balance for the month this expense occurred in
+            if (currentMonthlyBalances[paymentMonthId] !== undefined) {
+              currentMonthlyBalances[paymentMonthId] = 
+                currentMonthlyBalances[paymentMonthId] + expense.amount;
+            }
+            
+            updatedDebt.monthlyBalances = currentMonthlyBalances;
           }
           
           // Update the debt with reversed payment
@@ -258,9 +332,25 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           
           // If there's a related goal, update its progress by removing the amount
           if (relatedGoal) {
+            // Update monthly progress tracking
+            const updatedMonthlyProgress = { ...relatedGoal.monthlyProgress };
+            
+            if (updatedMonthlyProgress[paymentMonthId]) {
+              updatedMonthlyProgress[paymentMonthId] = Math.max(
+                0,
+                updatedMonthlyProgress[paymentMonthId] - expense.amount
+              );
+            }
+            
+            // Recalculate total progress
+            const newTotalProgress = Object.values(updatedMonthlyProgress).reduce(
+              (sum, value) => sum + value, 0
+            );
+            
             updateGoal({
               ...relatedGoal,
-              currentAmount: Math.max(0, relatedGoal.currentAmount - expense.amount),
+              currentAmount: Math.max(0, newTotalProgress),
+              monthlyProgress: updatedMonthlyProgress
             });
           }
         }

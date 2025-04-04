@@ -123,6 +123,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         targetDate: formattedDate,
         description: values.description || "",
         associatedDebtId: values.type === GoalType.DebtPayoff ? values.associatedDebtId : undefined,
+        monthlyProgress: goal.monthlyProgress || {}, // Preserve existing monthly progress
       });
     } else {
       addGoal({
@@ -133,6 +134,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         description: values.description || "",
         priority: 5, // Default medium priority
         associatedDebtId: values.type === GoalType.DebtPayoff ? values.associatedDebtId : undefined,
+        monthlyProgress: {},
       });
     }
     

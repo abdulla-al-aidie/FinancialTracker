@@ -64,7 +64,8 @@ export interface Goal {
   type: GoalType;
   name: string;
   targetAmount: number;
-  currentAmount: number;
+  currentAmount: number; // Current overall progress (sum of monthlyProgress)
+  monthlyProgress: Record<string, number>; // Progress by month ID (YYYY-MM)
   targetDate: string;
   description: string;
   priority: number; // 1-10 priority ranking, 10 being highest
@@ -94,6 +95,7 @@ export interface Debt {
   dueDate: string;
   priority?: number; // Higher number means higher priority
   monthlyPayments: Record<string, number>; // Monthly payments by month ID (YYYY-MM)
+  monthlyBalances: Record<string, number>; // Balance at the end of each month by month ID (YYYY-MM)
 }
 
 // AI Recommendation
