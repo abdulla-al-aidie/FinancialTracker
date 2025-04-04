@@ -959,28 +959,44 @@ export default function Dashboard() {
       {/* Goal Form Modal */}
       <GoalFormModal
         open={goalModalOpen}
-        onClose={() => setGoalModalOpen(false)}
+        onClose={() => {
+          setGoalModalOpen(false);
+          // Reset selected goal when the modal is closed
+          setSelectedGoal(undefined);
+        }}
         goal={selectedGoal}
       />
       
       {/* Income Form Modal */}
       <IncomeFormModal
         open={incomeModalOpen}
-        onClose={() => setIncomeModalOpen(false)}
+        onClose={() => {
+          setIncomeModalOpen(false);
+          // Reset selected income when the modal is closed
+          setSelectedIncome(undefined);
+        }}
         income={selectedIncome}
       />
       
       {/* Expense Form Modal */}
       <ExpenseFormModal
         open={expenseModalOpen}
-        onClose={() => setExpenseModalOpen(false)}
+        onClose={() => {
+          setExpenseModalOpen(false);
+          // Reset selected expense when the modal is closed
+          setSelectedExpense(undefined);
+        }}
         expense={selectedExpense}
       />
       
       {/* Debt Form Modal */}
       <DebtFormModal
         open={debtModalOpen}
-        onClose={() => setDebtModalOpen(false)}
+        onClose={() => {
+          setDebtModalOpen(false);
+          // Reset selected debt when the modal is closed
+          setSelectedDebt(undefined);
+        }}
         debt={selectedDebt}
       />
       
@@ -988,7 +1004,10 @@ export default function Dashboard() {
       {selectedDebt && (
         <DebtPaymentModal
           open={debtPaymentModalOpen}
-          onClose={() => setDebtPaymentModalOpen(false)}
+          onClose={() => {
+            setDebtPaymentModalOpen(false);
+            // Don't reset the selected debt here, only in DebtFormModal
+          }}
           debt={selectedDebt}
         />
       )}

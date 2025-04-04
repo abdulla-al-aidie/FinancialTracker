@@ -65,16 +65,28 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
     }
   });
   
-  // Set form values when in edit mode or when goal changes
+  // Set form values when in edit mode or when goal changes or clear them when modal is closed
   useEffect(() => {
-    if (goal && open) {
-      form.reset({
-        name: goal.name,
-        type: goal.type,
-        targetAmount: goal.targetAmount,
-        targetDate: goal.targetDate ? new Date(goal.targetDate) : new Date(),
-        description: goal.description,
-      });
+    if (open) {
+      if (goal) {
+        // Populate form with goal data if in edit mode
+        form.reset({
+          name: goal.name,
+          type: goal.type,
+          targetAmount: goal.targetAmount,
+          targetDate: goal.targetDate ? new Date(goal.targetDate) : new Date(),
+          description: goal.description,
+        });
+      } else {
+        // Reset to empty form if not in edit mode
+        form.reset({
+          name: "",
+          type: undefined,
+          targetAmount: undefined,
+          targetDate: new Date(),
+          description: "",
+        });
+      }
     }
   }, [form, goal, open]);
 
