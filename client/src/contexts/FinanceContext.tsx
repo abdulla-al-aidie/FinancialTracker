@@ -256,37 +256,63 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         // Active month is determined from months data or current month
         let currentActiveMonth = activeMonth;
         
-        // Load shared data that persists across months
-        if (userProfileData) setUserProfile(userProfileData);
+        // Load shared data that persists across months with proper defaults
+        if (userProfileData) {
+          // Ensure all required fields exist with safe defaults
+          const safeUserProfile: UserProfile = {
+            ...DEFAULT_USER_PROFILE,
+            ...userProfileData,
+            // Ensure nested objects always have their defaults
+            emailNotifications: {
+              ...DEFAULT_USER_PROFILE.emailNotifications,
+              ...(userProfileData.emailNotifications || {})
+            },
+            alertPreferences: {
+              ...DEFAULT_USER_PROFILE.alertPreferences,
+              ...(userProfileData.alertPreferences || {})
+            }
+          };
+          setUserProfile(safeUserProfile);
+          // Save the complete user profile back to ensure it has all fields
+          saveToLocalStorage("userProfile", safeUserProfile);
+        } else {
+          // Initialize with defaults if no data
+          setUserProfile(DEFAULT_USER_PROFILE);
+          saveToLocalStorage("userProfile", DEFAULT_USER_PROFILE);
+        }
+        
         if (scenariosData) setScenarios(scenariosData);
         
         // Initialize goals and debts records
         const goalsRecord: Record<string, Goal[]> = {};
         const debtsRecord: Record<string, Debt[]> = {};
         
-        // Load and process months data
-        if (monthsData) {
-          setMonths(monthsData);
+        // Initialize months - always ensure we have at least the current month
+        const currentMonthId = getCurrentMonthId();
+        let monthsArray: MonthData[] = [];
+        
+        // Process months data if available
+        if (monthsData && Array.isArray(monthsData) && monthsData.length > 0) {
+          monthsArray = monthsData;
           
           // Find active month
-          const activeMonthData = monthsData.find((m: MonthData) => m.isActive);
+          const activeMonthData = monthsArray.find(m => m.isActive);
           if (activeMonthData) {
             currentActiveMonth = activeMonthData.id;
             setActiveMonth(activeMonthData.id);
           }
         } else {
-          // Initialize with current month if nothing saved
-          const currentMonthId = getCurrentMonthId();
-          const initialMonths = [
-            { 
-              id: currentMonthId, 
-              name: getMonthName(currentMonthId),
-              isActive: true
-            }
-          ];
-          setMonths(initialMonths);
-          saveToLocalStorage("months", initialMonths);
+          // Initialize with current month if no months data available
+          monthsArray = [{ 
+            id: currentMonthId, 
+            name: getMonthName(currentMonthId),
+            isActive: true
+          }];
         }
+        
+        // Always set months and ensure it's saved
+        setMonths(monthsArray);
+        saveToLocalStorage("months", monthsArray);
         
         // Process goals data
         if (goalsData) {
@@ -1010,32 +1036,64 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Get the existing debt to compare changes
     const existingDebt = debts.find(d => d.id === debt.id);
     
-    // Only process if we found the existing debt
-    if (existingDebt) {
-      // Check if payments were deleted (comparing totalPaid)
-      if (debt.totalPaid < existingDebt.totalPaid) {
-        // Reset monthly payments since we can't know which months were affected
-        debt.monthlyPayments = {};
-      }
-      
-      // If the debt's total paid changed but monthly payments are missing, initialize them
-      if (!debt.monthlyPayments) {
-        debt.monthlyPayments = {};
-      }
+    if (!existingDebt) {
+      console.error("Cannot update debt: debt not found");
+      return;
     }
     
-    // Update the debt in state
-    const updatedDebts = debts.map(d => d.id === debt.id ? debt : d);
+    // Ensure monthly payments object exists
+    if (!debt.monthlyPayments) {
+      debt.monthlyPayments = {};
+    }
     
-    // Update the allDebts state with updated debts for the current month
-    setAllDebts({
-      ...allDebts,
-      [activeMonth]: updatedDebts
+    // Ensure monthly balances object exists
+    if (!debt.monthlyBalances) {
+      debt.monthlyBalances = {};
+    }
+    
+    // Calculate the total payments made across all months
+    const allPayments = debt.monthlyPayments || {};
+    const totalPaid = Object.values(allPayments).reduce(
+      (sum, amount) => sum + amount, 0
+    );
+    
+    // Update the totalPaid field for tracking
+    debt.totalPaid = totalPaid;
+    
+    // Don't update the main balance field directly anymore
+    // Leave it as the original remaining balance when the debt was first created
+    // This will be used as a fallback for months with no specific balance
+    
+    // Only update the current month's debt in the monthly records
+    const updatedDebts = debts.map(d => {
+      if (d.id === debt.id) {
+        return {
+          ...existingDebt,               // Start with existing debt data
+          name: debt.name,               // Update basic information
+          originalPrincipal: debt.originalPrincipal,
+          interestRate: debt.interestRate,
+          minimumPayment: debt.minimumPayment,
+          dueDate: debt.dueDate,
+          priority: debt.priority,       // Keep priority setting
+          totalPaid: totalPaid,          // Update with calculated total
+          monthlyPayments: debt.monthlyPayments,  // Update payment records
+          monthlyBalances: debt.monthlyBalances   // Update balance records
+        };
+      }
+      return d;
     });
+    
+    // Update the allDebts state with updated debts for the current month only
+    setAllDebts(prev => ({
+      ...prev,
+      [activeMonth]: updatedDebts
+    }));
     
     // Save to localStorage (both month-specific and for backward compatibility)
     saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
-    saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
+    
+    // For backward compatibility, but don't override the month structure
+    saveToLocalStorage("debts", updatedDebts);
     
     toast({
       title: "Debt Updated",
@@ -1670,9 +1728,6 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Only consider months up to and including the source month for calculations
     const relevantMonthIds = allMonthIds.filter(monthId => monthId <= sourceMonthId);
     
-    // Find the index of the source month in the sorted array
-    const sourceMonthIndex = allMonthIds.indexOf(sourceMonthId);
-    
     // 1. Propagate Goals
     // Get source month goals
     const sourceGoals = allGoals[sourceMonthId] || [];
@@ -1741,53 +1796,90 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // Find matching debt in target month if it exists
       const existingDebt = targetDebts.find(d => d.id === sourceDebt.id);
       
-      // Get the most recent balance from the source month
-      let latestBalance = sourceDebt.balance;  // Start with original balance
+      // Ensure we have the monthly records
+      const sourceMonthlyPayments = sourceDebt.monthlyPayments || {};
+      const sourceMonthlyBalances = sourceDebt.monthlyBalances || {};
       
-      // Check if there's a specific balance for the source month
-      if (sourceDebt.monthlyBalances && sourceDebt.monthlyBalances[sourceMonthId]) {
-        latestBalance = sourceDebt.monthlyBalances[sourceMonthId];
-      } else {
-        // If no specific balance for the source month, calculate it based on payments
-        if (sourceDebt.monthlyPayments) {
-          let totalPayments = 0;
-          relevantMonthIds.forEach(monthId => {
-            if (sourceDebt.monthlyPayments && sourceDebt.monthlyPayments[monthId]) {
-              totalPayments += sourceDebt.monthlyPayments[monthId];
-            }
-          });
-          
-          // Subtract total payments from the original balance
-          latestBalance = Math.max(0, (sourceDebt.originalPrincipal || sourceDebt.balance) - totalPayments);
+      // Start with the original principal (or balance as fallback)
+      const originalAmount = sourceDebt.originalPrincipal || sourceDebt.balance;
+      
+      // Calculate total payments up to source month
+      let totalPayments = 0;
+      for (const monthId of relevantMonthIds) {
+        if (sourceMonthlyPayments[monthId]) {
+          totalPayments += sourceMonthlyPayments[monthId];
         }
+      }
+      
+      // Get the most recent balance from the source month
+      let latestBalance;
+      
+      // First priority: Use the recorded balance for the source month if available
+      if (sourceMonthlyBalances[sourceMonthId] !== undefined) {
+        latestBalance = sourceMonthlyBalances[sourceMonthId];
+      } 
+      // Second priority: Calculate from payments if no balance is recorded
+      else {
+        latestBalance = Math.max(0, originalAmount - totalPayments);
+      }
+      
+      // For fully paid debts, ensure balance is zero
+      if (latestBalance <= 0) {
+        latestBalance = 0;
+      }
+      
+      // Record this calculated balance in the target month's balance record
+      const updatedMonthlyBalances = {
+        ...sourceMonthlyBalances
+      };
+      
+      // If the debt is not fully paid off, set the balance for the target month
+      if (latestBalance > 0) {
+        updatedMonthlyBalances[targetMonthId] = latestBalance;
       }
       
       if (existingDebt) {
         // Update existing debt with latest information from source month
         return {
-          ...sourceDebt,                           // Base properties 
-          name: sourceDebt.name,                   // Keep name from source
-          balance: latestBalance,                  // Update with latest calculated balance
-          dueDate: sourceDebt.dueDate,             // Keep due date from source
-          interestRate: sourceDebt.interestRate,   // Keep interest rate from source
-          minimumPayment: sourceDebt.minimumPayment,// Keep minimum payment from source
-          priority: sourceDebt.priority,           // Keep priority from source
+          ...existingDebt,                      // Start with existing debt properties 
+          name: sourceDebt.name,                // Basic info from source
+          originalPrincipal: sourceDebt.originalPrincipal,
+          dueDate: sourceDebt.dueDate,
+          interestRate: sourceDebt.interestRate,
+          minimumPayment: sourceDebt.minimumPayment,
+          priority: sourceDebt.priority,
+          // Important: The main balance field is no longer used for calculations
+          // It serves as a fallback for months with no specific balance
+          balance: sourceDebt.balance,
+          // Preserve any payments made in the target month
           monthlyPayments: {
-            ...sourceDebt.monthlyPayments,         // Bring source payments
-            ...existingDebt.monthlyPayments        // But preserve target month's own payments (if any)
+            ...sourceMonthlyPayments,
+            ...(existingDebt.monthlyPayments || {})
           },
+          // Set the calculated balance for this month
           monthlyBalances: {
-            ...sourceDebt.monthlyBalances,         // Bring source balances
-            ...existingDebt.monthlyBalances        // But preserve target month's own balances (if any)
-          }
+            ...updatedMonthlyBalances,
+            ...(existingDebt.monthlyBalances || {})
+          },
+          // Update the totalPaid property based on all payments
+          totalPaid: totalPayments + (
+            existingDebt.monthlyPayments && existingDebt.monthlyPayments[targetMonthId] 
+              ? existingDebt.monthlyPayments[targetMonthId] 
+              : 0
+          )
         };
       } else {
         // Create new debt with the latest balance
         return {
           ...sourceDebt,
-          balance: latestBalance,                  // Use latest calculated balance
-          monthlyPayments: { ...sourceDebt.monthlyPayments },
-          monthlyBalances: { ...sourceDebt.monthlyBalances }
+          // The main balance remains unchanged as a fallback
+          balance: sourceDebt.balance,
+          // Copy payment history
+          monthlyPayments: { ...sourceMonthlyPayments },
+          // Set balance for this new month
+          monthlyBalances: updatedMonthlyBalances,
+          // Update total paid amount
+          totalPaid: totalPayments
         };
       }
     });

@@ -51,16 +51,16 @@ export default function EmailSettingsModal({ open, onClose }: EmailSettingsModal
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize the form
+  // Initialize the form with safe defaults if properties are missing
   const form = useForm<EmailSettingsFormValues>({
     resolver: zodResolver(emailSettingsSchema),
     defaultValues: {
       email: userProfile.email || "",
-      notificationsEnabled: userProfile.notificationsEnabled,
-      budgetAlerts: userProfile.emailNotifications.budgetAlerts,
-      paymentReminders: userProfile.emailNotifications.paymentReminders,
-      goalProgress: userProfile.emailNotifications.goalProgress,
-      monthlyReports: userProfile.emailNotifications.monthlyReports,
+      notificationsEnabled: userProfile.notificationsEnabled ?? true,
+      budgetAlerts: userProfile.emailNotifications?.budgetAlerts ?? true,
+      paymentReminders: userProfile.emailNotifications?.paymentReminders ?? true,
+      goalProgress: userProfile.emailNotifications?.goalProgress ?? true,
+      monthlyReports: userProfile.emailNotifications?.monthlyReports ?? false,
     },
   });
 

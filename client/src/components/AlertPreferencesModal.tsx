@@ -50,14 +50,14 @@ export default function AlertPreferencesModal({ open, onClose }: AlertPreference
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Initialize the form
+  // Initialize the form with safe defaults if properties are missing
   const form = useForm<AlertPreferencesFormValues>({
     resolver: zodResolver(alertPreferencesSchema),
     defaultValues: {
-      budgetWarningThreshold: userProfile.alertPreferences.budgetWarningThreshold,
-      lowBalanceThreshold: userProfile.alertPreferences.lowBalanceThreshold,
-      upcomingPaymentDays: userProfile.alertPreferences.upcomingPaymentDays,
-      instantAlerts: userProfile.alertPreferences.instantAlerts,
+      budgetWarningThreshold: userProfile.alertPreferences?.budgetWarningThreshold ?? 80,
+      lowBalanceThreshold: userProfile.alertPreferences?.lowBalanceThreshold ?? 100,
+      upcomingPaymentDays: userProfile.alertPreferences?.upcomingPaymentDays ?? 3,
+      instantAlerts: userProfile.alertPreferences?.instantAlerts ?? true,
     },
   });
 

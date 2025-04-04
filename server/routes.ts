@@ -1335,9 +1335,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ data: null });
       }
       
-      res.json({
-        data: JSON.parse(storedData as string)
-      });
+      // Check if storedData is already an object (this happens with @replit/database)
+      if (typeof storedData === 'object') {
+        return res.json({ data: storedData });
+      }
+      
+      // Otherwise, parse it from string
+      try {
+        res.json({
+          data: JSON.parse(storedData as string)
+        });
+      } catch (parseError) {
+        console.error(`Error parsing JSON data:`, parseError);
+        res.json({ data: storedData });
+      }
     } catch (error) {
       console.error(`Error retrieving data from Replit DB:`, error);
       res.status(500).json({
