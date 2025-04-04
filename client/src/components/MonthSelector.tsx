@@ -71,11 +71,12 @@ export default function MonthSelector() {
     
     if (!exists) {
       // Month doesn't exist, so add it first
+      // This will initialize the month with carried-over data from the previous month
       const date = new Date(`${monthId}-01`);
       addMonth(date.toISOString());
     }
     
-    // Set the active month
+    // Set the active month (this will cause all data to be month-specific)
     setActiveMonth(monthId);
   };
   

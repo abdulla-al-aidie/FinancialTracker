@@ -170,14 +170,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   });
   const [activeMonth, setActiveMonth] = useState<string>(getCurrentMonthId());
   
-  // Financial data by month
+  // All financial data is organized by month
   const [allIncomes, setAllIncomes] = useState<Record<string, Income[]>>({});
   const [allExpenses, setAllExpenses] = useState<Record<string, Expense[]>>({});
   const [allBudgets, setAllBudgets] = useState<Record<string, Budget[]>>({});
+  const [allGoals, setAllGoals] = useState<Record<string, Goal[]>>({});  // Month-specific goals
+  const [allDebts, setAllDebts] = useState<Record<string, Debt[]>>({});  // Month-specific debts
   
-  // Data shared across all months
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [debts, setDebts] = useState<Debt[]>([]);
+  // These are still shared across all months
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -194,6 +194,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const incomes = allIncomes[activeMonth] || [];
   const expenses = allExpenses[activeMonth] || [];
   const budgets = allBudgets[activeMonth] || [];
+  const goals = allGoals[activeMonth] || [];
+  const debts = allDebts[activeMonth] || [];
   
   // Load data from localStorage on initial render
   useEffect(() => {
@@ -205,6 +207,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     // Load shared data that persists across months
     if (savedUserProfile) setUserProfile(JSON.parse(savedUserProfile));
+    
+    // Initialize goals and debts records
+    const goalsRecord: Record<string, Goal[]> = {};
+    const debtsRecord: Record<string, Debt[]> = {};
+    
     if (savedGoals) {
       // Parse the goals and ensure they all have a priority
       const loadedGoals = JSON.parse(savedGoals);
@@ -212,11 +219,25 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         ...goal,
         priority: goal.priority !== undefined ? goal.priority : 5 // Set default priority if missing
       }));
-      setGoals(goalsWithPriority);
-      // Save back to ensure all goals have priorities
+      
+      // Initialize goals for the current month
+      goalsRecord[activeMonth] = goalsWithPriority;
+      setAllGoals(goalsRecord);
+      
+      // Save back to ensure all goals have priorities (kept for backward compatibility)
       localStorage.setItem("goals", JSON.stringify(goalsWithPriority));
     }
-    if (savedDebts) setDebts(JSON.parse(savedDebts));
+    
+    if (savedDebts) {
+      const loadedDebts = JSON.parse(savedDebts);
+      
+      // Initialize debts for the current month
+      debtsRecord[activeMonth] = loadedDebts;
+      setAllDebts(debtsRecord);
+      
+      // Keep a copy in the old format for backward compatibility
+      localStorage.setItem("debts", JSON.stringify(loadedDebts));
+    }
     if (savedScenarios) setScenarios(JSON.parse(savedScenarios));
     
     // Load months data or initialize with current month if none exists
@@ -760,9 +781,19 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       currentAmount: 0,
       priority: goal.priority || 5 // Set default priority to 5 (medium) if not provided
     };
+    
+    // Add goal to the current month 
     const updatedGoals = [...goals, newGoal];
-    setGoals(updatedGoals);
-    localStorage.setItem("goals", JSON.stringify(updatedGoals));
+    
+    // Update the allGoals state with the new goal for the current month
+    setAllGoals({
+      ...allGoals,
+      [activeMonth]: updatedGoals
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
+    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
     
     toast({
       title: "Goal Created",
@@ -773,8 +804,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const updateGoal = (goal: Goal) => {
     const updatedGoals = goals.map(g => g.id === goal.id ? goal : g);
-    setGoals(updatedGoals);
-    localStorage.setItem("goals", JSON.stringify(updatedGoals));
+    
+    // Update the allGoals state with updated goals for the current month
+    setAllGoals({
+      ...allGoals,
+      [activeMonth]: updatedGoals
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
+    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
     
     toast({
       title: "Goal Updated",
@@ -785,8 +824,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const deleteGoal = (id: number) => {
     const updatedGoals = goals.filter(g => g.id !== id);
-    setGoals(updatedGoals);
-    localStorage.setItem("goals", JSON.stringify(updatedGoals));
+    
+    // Update the allGoals state with filtered goals for the current month
+    setAllGoals({
+      ...allGoals,
+      [activeMonth]: updatedGoals
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
+    localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
     
     toast({
       title: "Goal Deleted",
@@ -799,8 +846,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   const addDebt = (debt: Omit<Debt, "id">) => {
     const newDebt = { ...debt, id: Date.now() };
     const updatedDebts = [...debts, newDebt];
-    setDebts(updatedDebts);
-    localStorage.setItem("debts", JSON.stringify(updatedDebts));
+    
+    // Update the allDebts state with new debt for the current month
+    setAllDebts({
+      ...allDebts, 
+      [activeMonth]: updatedDebts
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
+    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
     
     toast({
       title: "Debt Added",
@@ -829,8 +884,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     // Update the debt in state
     const updatedDebts = debts.map(d => d.id === debt.id ? debt : d);
-    setDebts(updatedDebts);
-    localStorage.setItem("debts", JSON.stringify(updatedDebts));
+    
+    // Update the allDebts state with updated debts for the current month
+    setAllDebts({
+      ...allDebts,
+      [activeMonth]: updatedDebts
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
+    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
     
     toast({
       title: "Debt Updated",
@@ -841,8 +904,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   const deleteDebt = (id: number) => {
     const updatedDebts = debts.filter(d => d.id !== id);
-    setDebts(updatedDebts);
-    localStorage.setItem("debts", JSON.stringify(updatedDebts));
+    
+    // Update the allDebts state with filtered debts for the current month
+    setAllDebts({
+      ...allDebts,
+      [activeMonth]: updatedDebts
+    });
+    
+    // Save to localStorage (both month-specific and for backward compatibility)
+    localStorage.setItem(`debts_${activeMonth}`, JSON.stringify(updatedDebts));
+    localStorage.setItem("debts", JSON.stringify(updatedDebts)); // For backwards compatibility
     
     toast({
       title: "Debt Deleted",
@@ -955,15 +1026,14 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       isActive: false
     };
     
-    // If this is the first month for this month/year, copy budgets from previous month
-    if (!allBudgets[monthId]) {
-      // Find most recent month with budgets
-      const monthsWithBudgets = Object.keys(allBudgets);
-      if (monthsWithBudgets.length > 0) {
-        // Sort months and get the most recent one
-        const mostRecentMonth = monthsWithBudgets.sort().pop();
-        if (mostRecentMonth) {
-          // Copy budgets but reset spent amount
+    // Find a previous month to copy data from
+    const monthsWithData = Object.keys(allBudgets);
+    if (monthsWithData.length > 0) {
+      // Sort months and get the most recent one
+      const mostRecentMonth = monthsWithData.sort().pop();
+      if (mostRecentMonth) {
+        // 1. Copy budgets but reset spent amount
+        if (!allBudgets[monthId]) {
           const newBudgets = allBudgets[mostRecentMonth].map(budget => ({
             ...budget,
             spent: 0
@@ -975,6 +1045,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           
           // Save to localStorage
           localStorage.setItem(`budgets_${monthId}`, JSON.stringify(newBudgets));
+        }
+        
+        // 2. Copy goals and carry forward their progress
+        if (!allGoals[monthId]) {
+          // If there are goals in the previous month, copy them forward
+          if (allGoals[mostRecentMonth] && allGoals[mostRecentMonth].length > 0) {
+            const newGoals = allGoals[mostRecentMonth];
+            setAllGoals({
+              ...allGoals,
+              [monthId]: newGoals
+            });
+            
+            // Save to localStorage
+            localStorage.setItem(`goals_${monthId}`, JSON.stringify(newGoals));
+          }
+        }
+        
+        // 3. Copy debts with their updated balances
+        if (!allDebts[monthId]) {
+          // If there are debts in the previous month, copy them forward
+          if (allDebts[mostRecentMonth] && allDebts[mostRecentMonth].length > 0) {
+            const newDebts = allDebts[mostRecentMonth];
+            setAllDebts({
+              ...allDebts,
+              [monthId]: newDebts
+            });
+            
+            // Save to localStorage
+            localStorage.setItem(`debts_${monthId}`, JSON.stringify(newDebts));
+          }
         }
       }
     }
@@ -1135,8 +1235,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       });
 
       // Save updated goals to state and localStorage
-      setGoals(updatedGoals);
-      localStorage.setItem("goals", JSON.stringify(updatedGoals));
+      setAllGoals({
+        ...allGoals,
+        [activeMonth]: updatedGoals
+      });
+      localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
+      localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
 
       toast({
         title: "Goals Prioritized",
@@ -1279,8 +1383,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           return g;
         });
         
-        setGoals(updatedGoals);
-        localStorage.setItem("goals", JSON.stringify(updatedGoals));
+        // Update the allGoals state with the updated goals for the current month
+        setAllGoals({
+          ...allGoals,
+          [activeMonth]: updatedGoals
+        });
+        
+        // Save to localStorage (both month-specific and for backward compatibility)
+        localStorage.setItem(`goals_${activeMonth}`, JSON.stringify(updatedGoals));
+        localStorage.setItem("goals", JSON.stringify(updatedGoals)); // For backwards compatibility
         
         toast({
           title: "Recommendations Generated",
