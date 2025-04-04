@@ -1084,19 +1084,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const income of incomes) {
             if (income.id && income.id > 0) {
               // Update existing income
-              await storage.updateIncome(income.id, {
-                ...income,
+              // Clean and validate the income data
+              const cleanIncome = {
+                source: income.source,
+                amount: String(income.amount), // Convert to string for numeric column
+                category: income.category,
+                description: income.description,
+                date: income.date instanceof Date ? income.date : new Date(income.date),
+                recurring: Boolean(income.isRecurring),
+                notes: income.description || "",
                 userId: 1,
                 monthId: activeMonth
-              });
+              };
+              
+              await storage.updateIncome(income.id, cleanIncome);
             } else {
               // Create new income
-              await storage.createIncome({
-                ...income,
+              // Clean and validate the income data
+              const newIncome = {
+                source: income.source,
+                amount: String(income.amount), // Convert to string for numeric column
+                date: income.date instanceof Date ? income.date : new Date(income.date || Date.now()),
+                recurring: Boolean(income.isRecurring),
+                notes: income.description || "",
                 userId: 1,
                 monthId: activeMonth,
                 createdAt: new Date()
-              });
+              };
+              
+              await storage.createIncome(newIncome);
             }
           }
         }
@@ -1106,19 +1122,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const expense of expenses) {
             if (expense.id && expense.id > 0) {
               // Update existing expense
-              await storage.updateExpense(expense.id, {
-                ...expense,
+              // Clean and validate the expense data
+              const cleanExpense = {
+                category: expense.category,
+                amount: String(expense.amount), // Convert to string for numeric column
+                description: expense.description || "",
+                date: expense.date instanceof Date ? expense.date : new Date(expense.date || Date.now()),
+                recurring: Boolean(expense.recurring || expense.isRecurring),
+                essential: Boolean(expense.essential),
                 userId: 1,
                 monthId: activeMonth
-              });
+              };
+              
+              await storage.updateExpense(expense.id, cleanExpense);
             } else {
               // Create new expense
-              await storage.createExpense({
-                ...expense,
+              // Clean and validate the expense data
+              const newExpense = {
+                category: expense.category,
+                amount: String(expense.amount), // Convert to string for numeric column
+                description: expense.description || "",
+                date: expense.date instanceof Date ? expense.date : new Date(expense.date || Date.now()),
+                recurring: Boolean(expense.recurring || expense.isRecurring),
+                essential: Boolean(expense.essential),
                 userId: 1,
                 monthId: activeMonth,
                 createdAt: new Date()
-              });
+              };
+              
+              await storage.createExpense(newExpense);
             }
           }
         }
@@ -1128,19 +1160,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const budget of budgets) {
             if (budget.id && budget.id > 0) {
               // Update existing budget
-              await storage.updateBudget(budget.id, {
-                ...budget,
+              // Clean and validate the budget data
+              const cleanBudget = {
+                category: budget.category,
+                limit: String(budget.limit), // Convert to string for numeric column
                 userId: 1,
                 monthId: activeMonth
-              });
+              };
+              
+              await storage.updateBudget(budget.id, cleanBudget);
             } else {
               // Create new budget
-              await storage.createBudget({
-                ...budget,
+              // Clean and validate the budget data
+              const newBudget = {
+                category: budget.category,
+                limit: String(budget.limit), // Convert to string for numeric column
                 userId: 1,
                 monthId: activeMonth,
                 createdAt: new Date()
-              });
+              };
+              
+              await storage.createBudget(newBudget);
             }
           }
         }
@@ -1150,19 +1190,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const goal of goals) {
             if (goal.id && goal.id > 0) {
               // Update existing goal
-              await storage.updateGoal(goal.id, {
-                ...goal,
+              // Clean and validate the goal data
+              const cleanGoal = {
+                name: goal.name,
+                description: goal.description || "",
+                targetAmount: String(goal.targetAmount), // Convert to string for numeric column
+                currentAmount: String(goal.currentAmount || 0), // Convert to string for numeric column
+                targetDate: goal.targetDate instanceof Date ? goal.targetDate : new Date(goal.targetDate || Date.now()),
+                type: goal.type,
+                priority: goal.priority || 0,
                 userId: 1,
                 monthId: activeMonth
-              });
+              };
+              
+              await storage.updateGoal(goal.id, cleanGoal);
             } else {
               // Create new goal
-              await storage.createGoal({
-                ...goal,
+              // Clean and validate the goal data
+              const newGoal = {
+                name: goal.name,
+                description: goal.description || "",
+                targetAmount: String(goal.targetAmount), // Convert to string for numeric column
+                currentAmount: String(goal.currentAmount || 0), // Convert to string for numeric column
+                targetDate: goal.targetDate instanceof Date ? goal.targetDate : new Date(goal.targetDate || Date.now()),
+                type: goal.type,
+                priority: goal.priority || 0,
                 userId: 1,
                 monthId: activeMonth,
                 createdAt: new Date()
-              });
+              };
+              
+              await storage.createGoal(newGoal);
             }
           }
         }
@@ -1172,19 +1230,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
           for (const debt of debts) {
             if (debt.id && debt.id > 0) {
               // Update existing debt
-              await storage.updateDebt(debt.id, {
-                ...debt,
+              // Clean and validate the debt data
+              const cleanDebt = {
+                name: debt.name,
+                balance: String(debt.balance), // Convert to string for numeric column
+                interestRate: debt.interestRate ? String(debt.interestRate) : null,
+                minimumPayment: debt.minimumPayment ? String(debt.minimumPayment) : null,
+                priority: debt.priority || 0,
+                dueDate: debt.dueDate instanceof Date ? debt.dueDate : (debt.dueDate ? new Date(debt.dueDate) : null),
                 userId: 1,
                 monthId: activeMonth
-              });
+              };
+              
+              await storage.updateDebt(debt.id, cleanDebt);
             } else {
               // Create new debt
-              await storage.createDebt({
-                ...debt,
+              // Clean and validate the debt data
+              const newDebt = {
+                name: debt.name,
+                balance: String(debt.balance), // Convert to string for numeric column
+                interestRate: debt.interestRate ? String(debt.interestRate) : null,
+                minimumPayment: debt.minimumPayment ? String(debt.minimumPayment) : null,
+                priority: debt.priority || 0,
+                dueDate: debt.dueDate instanceof Date ? debt.dueDate : (debt.dueDate ? new Date(debt.dueDate) : null),
                 userId: 1,
                 monthId: activeMonth,
                 createdAt: new Date()
-              });
+              };
+              
+              await storage.createDebt(newDebt);
             }
           }
         }
