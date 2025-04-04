@@ -68,6 +68,7 @@ export interface Goal {
   targetDate: string;
   description: string;
   priority: number; // 1-10 priority ranking, 10 being highest
+  associatedDebtId?: number; // For DebtPayoff goals, links to the debt being paid off
   aiRecommendations?: GoalRecommendation[]; // AI-generated recommendations for achieving this goal
 }
 

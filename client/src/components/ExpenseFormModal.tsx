@@ -125,9 +125,13 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
         // Update the debt
         updateDebt(updatedDebt);
         
-        // Find related debt payoff goal if any
+        // Find related debt payoff goal if any (first by debt ID, then by name)
         const relatedGoal = goals.find(
-          goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToUpdate.name)
+          goal => goal.type === GoalType.DebtPayoff && goal.associatedDebtId === debtToUpdate.id
+        ) || goals.find(
+          goal => goal.type === GoalType.DebtPayoff && 
+                 !goal.associatedDebtId && 
+                 goal.name.includes(debtToUpdate.name)
         );
         
         // If there's a related goal, update its progress
@@ -178,9 +182,13 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           // Update the debt with reversed payment
           updateDebt(updatedDebt);
           
-          // Find related debt payoff goal if any
+          // Find related debt payoff goal if any (first by debt ID, then by name)
           const relatedGoal = goals.find(
-            goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToReverse.name)
+            goal => goal.type === GoalType.DebtPayoff && goal.associatedDebtId === debtToReverse.id
+          ) || goals.find(
+            goal => goal.type === GoalType.DebtPayoff && 
+                   !goal.associatedDebtId && 
+                   goal.name.includes(debtToReverse.name)
           );
           
           // If there's a related goal, update its progress by removing the amount
@@ -239,9 +247,13 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           // Update the debt with reversed payment
           updateDebt(updatedDebt);
           
-          // Find related debt payoff goal if any
+          // Find related debt payoff goal if any (first by debt ID, then by name)
           const relatedGoal = goals.find(
-            goal => goal.type === GoalType.DebtPayoff && goal.name.includes(debtToUpdate.name)
+            goal => goal.type === GoalType.DebtPayoff && goal.associatedDebtId === debtToUpdate.id
+          ) || goals.find(
+            goal => goal.type === GoalType.DebtPayoff && 
+                   !goal.associatedDebtId && 
+                   goal.name.includes(debtToUpdate.name)
           );
           
           // If there's a related goal, update its progress by removing the amount

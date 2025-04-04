@@ -38,6 +38,7 @@ const goalFormSchema = z.object({
     required_error: "Target date is required",
   }),
   description: z.string().optional(),
+  associatedDebtId: z.number().optional(),
 });
 
 type GoalFormValues = z.infer<typeof goalFormSchema>;
@@ -49,7 +50,7 @@ interface GoalFormModalProps {
 }
 
 export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProps) {
-  const { addGoal, updateGoal, deleteGoal } = useFinance();
+  const { addGoal, updateGoal, deleteGoal, debts } = useFinance();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isEditMode = !!goal;
   
@@ -62,8 +63,12 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
       targetAmount: undefined,
       targetDate: undefined,
       description: "",
+      associatedDebtId: undefined,
     }
   });
+  
+  // Watch for goal type changes to show/hide debt selection dropdown
+  const watchGoalType = form.watch("type");
   
   // Set form values when in edit mode or when goal changes or clear them when modal is closed
   useEffect(() => {
@@ -76,6 +81,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
           targetAmount: goal.targetAmount,
           targetDate: goal.targetDate ? new Date(goal.targetDate) : new Date(),
           description: goal.description,
+          associatedDebtId: goal.associatedDebtId,
         });
       } else {
         // Reset to empty form if not in edit mode
@@ -85,10 +91,25 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
           targetAmount: undefined,
           targetDate: new Date(),
           description: "",
+          associatedDebtId: undefined,
         });
       }
     }
   }, [form, goal, open]);
+  
+  // When a debt is selected, update target amount to match debt balance
+  useEffect(() => {
+    const debtId = form.getValues("associatedDebtId");
+    if (debtId !== undefined && watchGoalType === GoalType.DebtPayoff) {
+      const selectedDebt = debts.find(debt => debt.id === debtId);
+      if (selectedDebt) {
+        form.setValue("targetAmount", selectedDebt.balance);
+        if (!isEditMode) {
+          form.setValue("name", `Pay off ${selectedDebt.name}`);
+        }
+      }
+    }
+  }, [form.getValues("associatedDebtId"), watchGoalType, debts, form, isEditMode]);
 
   function onSubmit(values: GoalFormValues) {
     const formattedDate = format(values.targetDate, "yyyy-MM-dd");
@@ -101,6 +122,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         targetAmount: values.targetAmount,
         targetDate: formattedDate,
         description: values.description || "",
+        associatedDebtId: values.type === GoalType.DebtPayoff ? values.associatedDebtId : undefined,
       });
     } else {
       addGoal({
@@ -110,6 +132,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         targetDate: formattedDate,
         description: values.description || "",
         priority: 5, // Default medium priority
+        associatedDebtId: values.type === GoalType.DebtPayoff ? values.associatedDebtId : undefined,
       });
     }
     
@@ -232,6 +255,37 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
                   </FormItem>
                 )}
               />
+              
+              {/* Display the debt dropdown only if goal type is DebtPayoff and debts exist */}
+              {watchGoalType === GoalType.DebtPayoff && debts.length > 0 && (
+                <FormField
+                  control={form.control}
+                  name="associatedDebtId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Debt to Pay Off</FormLabel>
+                      <Select
+                        onValueChange={(value) => field.onChange(parseInt(value))}
+                        value={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a debt" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {debts.map((debt) => (
+                            <SelectItem key={debt.id} value={debt.id.toString()}>
+                              {debt.name} - {formatCurrency(debt.balance)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               
               <FormField
                 control={form.control}
