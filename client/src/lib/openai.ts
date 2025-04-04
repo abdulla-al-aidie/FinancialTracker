@@ -7,7 +7,7 @@ const MODEL = "gpt-4o-mini";
 // In a production environment, this should be handled securely through a backend proxy
 export const openai = new OpenAI({
   apiKey: import.meta.env.VITE_OPENAI_API_KEY || "sk-dummy-key-for-development",
-  dangerouslyAllowBrowser: true // Note: For production, you would typically proxy requests through your backend
+  dangerouslyAllowBrowser: true, // Note: For production, you would typically proxy requests through your backend
 });
 
 interface FinancialData {
@@ -21,7 +21,9 @@ interface FinancialData {
   averageInterestRate: number;
 }
 
-export async function generateFinancialInsights(data: FinancialData): Promise<{type: string; description: string; impact: string}[]> {
+export async function generateFinancialInsights(
+  data: FinancialData,
+): Promise<{ type: string; description: string; impact: string }[]> {
   try {
     const prompt = `
       You are a financial advisor assistant with expertise across personal finance. Based on the following financial data, generate detailed, specific, and personalized recommendations to help improve the user's financial situation.
@@ -31,8 +33,8 @@ export async function generateFinancialInsights(data: FinancialData): Promise<{t
       - Total Monthly Expenses: $${data.totalExpenses.toFixed(2)}
       - Net Cashflow: $${data.netCashflow.toFixed(2)}
       - Savings Rate: ${data.savingsRate.toFixed(1)}%
-      - Top Expense Categories: ${data.topExpenseCategories.map(c => `${c.category} ($${c.amount.toFixed(2)})`).join(', ')}
-      - Over Budget Categories: ${data.overBudgetCategories.length > 0 ? data.overBudgetCategories.join(', ') : 'None'}
+      - Top Expense Categories: ${data.topExpenseCategories.map((c) => `${c.category} ($${c.amount.toFixed(2)})`).join(", ")}
+      - Over Budget Categories: ${data.overBudgetCategories.length > 0 ? data.overBudgetCategories.join(", ") : "None"}
       - Total Debt: $${data.debtTotal.toFixed(2)}
       - Average Interest Rate: ${data.averageInterestRate.toFixed(1)}%
       
@@ -62,66 +64,84 @@ export async function generateFinancialInsights(data: FinancialData): Promise<{t
       ]
     `;
 
+    console.log(prompt);
+
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      temperature: 0.7 // Add some variability to responses
+      temperature: 0.7, // Add some variability to responses
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      return [{
-        type: "Error",
-        description: "Unable to generate recommendations at this time.",
-        impact: "No impact calculated"
-      }];
+      return [
+        {
+          type: "Error",
+          description: "Unable to generate recommendations at this time.",
+          impact: "No impact calculated",
+        },
+      ];
     }
 
     try {
       const parsedResponse = JSON.parse(content);
       if (Array.isArray(parsedResponse) && parsedResponse.length > 0) {
-        return parsedResponse.map(item => ({
+        return parsedResponse.map((item) => ({
           type: item.type || "Financial Insight",
           description: item.description || "No description provided",
-          impact: item.impact || "Impact not calculated"
+          impact: item.impact || "Impact not calculated",
         }));
       } else {
-        return [{
-          type: "General Advice",
-          description: "We couldn't generate personalized recommendations based on your current data. Try adding more transactions and budget information.",
-          impact: "Impact can't be calculated with limited data"
-        }];
+        return [
+          {
+            type: "General Advice",
+            description:
+              "We couldn't generate personalized recommendations based on your current data. Try adding more transactions and budget information.",
+            impact: "Impact can't be calculated with limited data",
+          },
+        ];
       }
     } catch (error: any) {
       console.error("Error parsing OpenAI response:", error);
-      return [{
-        type: "Error",
-        description: "We encountered an issue processing the financial analysis. Our team has been notified.",
-        impact: "No impact calculated"
-      }];
+      return [
+        {
+          type: "Error",
+          description:
+            "We encountered an issue processing the financial analysis. Our team has been notified.",
+          impact: "No impact calculated",
+        },
+      ];
     }
   } catch (error: any) {
     console.error("Error calling OpenAI API:", error);
-    
+
     // Check if it's an API key error
-    if (error.message && error.message.includes('API key')) {
-      return [{
-        type: "API Configuration Error",
-        description: "OpenAI API key is missing or invalid. Please provide a valid API key in your environment variables.",
-        impact: "No impact calculated"
-      }];
+    if (error.message && error.message.includes("API key")) {
+      return [
+        {
+          type: "API Configuration Error",
+          description:
+            "OpenAI API key is missing or invalid. Please provide a valid API key in your environment variables.",
+          impact: "No impact calculated",
+        },
+      ];
     }
-    
-    return [{
-      type: "Service Unavailable",
-      description: "Our AI recommendation service is temporarily unavailable. Please try again later.",
-      impact: "No impact calculated"
-    }];
+
+    return [
+      {
+        type: "Service Unavailable",
+        description:
+          "Our AI recommendation service is temporarily unavailable. Please try again later.",
+        impact: "No impact calculated",
+      },
+    ];
   }
 }
 
-export async function categorizeTransaction(description: string): Promise<string> {
+export async function categorizeTransaction(
+  description: string,
+): Promise<string> {
   try {
     const prompt = `
       You are a financial categorization assistant. Based on the following transaction description, categorize it into one of these categories:
@@ -145,10 +165,11 @@ export async function categorizeTransaction(description: string): Promise<string
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 20
+      max_tokens: 20,
     });
 
-    const category = response.choices[0]?.message?.content?.trim() || "Miscellaneous & Other";
+    const category =
+      response.choices[0]?.message?.content?.trim() || "Miscellaneous & Other";
     return category;
   } catch (error: any) {
     console.error("Error categorizing transaction:", error);
@@ -179,14 +200,14 @@ export async function analyzeFinancialHealth(data: {
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
     });
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      return { 
-        score: 50, 
-        feedback: "Unable to analyze financial health at this time." 
+      return {
+        score: 50,
+        feedback: "Unable to analyze financial health at this time.",
       };
     }
 
@@ -194,20 +215,20 @@ export async function analyzeFinancialHealth(data: {
       const parsedResponse = JSON.parse(content);
       return {
         score: parsedResponse.score || 50,
-        feedback: parsedResponse.feedback || "Analysis complete."
+        feedback: parsedResponse.feedback || "Analysis complete.",
       };
     } catch (error: any) {
       console.error("Error parsing OpenAI response:", error);
-      return { 
-        score: 50, 
-        feedback: "Unable to analyze financial health at this time." 
+      return {
+        score: 50,
+        feedback: "Unable to analyze financial health at this time.",
       };
     }
   } catch (error: any) {
     console.error("Error analyzing financial health:", error);
-    return { 
-      score: 50, 
-      feedback: "Unable to analyze financial health at this time." 
+    return {
+      score: 50,
+      feedback: "Unable to analyze financial health at this time.",
     };
   }
 }

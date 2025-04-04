@@ -6,7 +6,7 @@ import {
   DollarSign,
   CreditCard,
   PiggyBank,
-  BarChart,
+  BarChart as ChartIcon,
   Target,
   Settings2,
   ChevronUp,
@@ -24,7 +24,21 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ExpenseCategory, GoalType, Budget, Goal, Income, Expense, Debt, IncomeType } from "@/types/finance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { 
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from "recharts";
 import BudgetFormModal from "@/components/BudgetFormModal";
 import GoalFormModal from "@/components/GoalFormModal";
 import IncomeFormModal from "@/components/IncomeFormModal";
@@ -108,15 +122,17 @@ export default function Dashboard() {
   // Get unread alerts
   const unreadAlerts = alerts.filter(alert => !alert.isRead);
   
-  // Prepare cashflow data for line chart (mock data for now)
+  // Get active month data for the chart
+  const { activeMonth, months } = useFinance();
+  const activeMonthName = months.find(month => month.id === activeMonth)?.name || 'Current Month';
+  
+  // Prepare cashflow data for the active month only
   const cashflowData = [
-    { month: 'Jan', income: 4000, expenses: 2400 },
-    { month: 'Feb', income: 3000, expenses: 2210 },
-    { month: 'Mar', income: 2000, expenses: 2290 },
-    { month: 'Apr', income: 2780, expenses: 2000 },
-    { month: 'May', income: 1890, expenses: 2181 },
-    { month: 'Jun', income: 2390, expenses: 2500 },
-    { month: 'Jul', income: 3490, expenses: 2100 },
+    { 
+      month: activeMonthName, 
+      income: totalIncome, 
+      expenses: totalExpenses 
+    }
   ];
   
   // Mock budget utilization data (replace with actual data later)
@@ -179,7 +195,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
-              <BarChart className="text-primary h-6 w-6 mr-2" />
+              <ChartIcon className="text-primary h-6 w-6 mr-2" />
               <h1 className="text-xl font-bold text-gray-800">Finance Tracker</h1>
             </div>
             <div>
@@ -291,7 +307,7 @@ export default function Dashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className="grid w-full grid-cols-6 md:grid-cols-7 lg:w-auto">
             <TabsTrigger value="overview" className="flex items-center">
-              <BarChart className="h-4 w-4 mr-2" />
+              <ChartIcon className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
             <TabsTrigger value="transactions" className="flex items-center">
@@ -367,15 +383,15 @@ export default function Dashboard() {
               <Card className="col-span-1">
                 <CardHeader>
                   <CardTitle>Income vs Expenses</CardTitle>
-                  <CardDescription>Monthly comparison of cash flow</CardDescription>
+                  <CardDescription>Current month's financial breakdown</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
+                      <BarChart
                         data={cashflowData}
                         margin={{
-                          top: 5,
+                          top: 20,
                           right: 30,
                           left: 20,
                           bottom: 5,
@@ -385,18 +401,20 @@ export default function Dashboard() {
                         <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                        <Line
-                          type="monotone"
-                          dataKey="income"
-                          stroke="#3B82F6"
-                          activeDot={{ r: 8 }}
+                        <Legend />
+                        <Bar 
+                          dataKey="income" 
+                          name="Income" 
+                          fill="#3B82F6"
+                          radius={[4, 4, 0, 0]}
                         />
-                        <Line 
-                          type="monotone" 
+                        <Bar 
                           dataKey="expenses" 
-                          stroke="#EF4444" 
+                          name="Expenses" 
+                          fill="#EF4444"
+                          radius={[4, 4, 0, 0]}  
                         />
-                      </LineChart>
+                      </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
