@@ -57,6 +57,7 @@ import CurrencyModal from "@/components/CurrencyModal";
 import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIInsightsGenerator from "@/components/AIInsightsGenerator";
 import AIGoalPrioritization from "@/components/AIGoalPrioritization";
+import AISpendingOptimization from "@/components/AISpendingOptimization";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
@@ -981,6 +982,9 @@ export default function Dashboard() {
           {/* Insights Tab */}
           <TabsContent value="insights" className="space-y-4">
             <AIInsightsGenerator />
+            
+            {/* Add the AI Spending Optimization component */}
+            <AISpendingOptimization />
             
             <Card>
               <CardHeader>

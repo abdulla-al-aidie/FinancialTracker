@@ -148,23 +148,6 @@ export default function AIGoalPrioritization() {
               </>
             )}
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleAnalyzeSpending}
-            disabled={isAnalyzingSpending}
-          >
-            {isAnalyzingSpending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <TrendingUp className="mr-2 h-4 w-4" />
-                Optimize Spending
-              </>
-            )}
-          </Button>
         </div>
       </div>
 
