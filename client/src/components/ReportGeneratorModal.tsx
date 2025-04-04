@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -35,10 +35,14 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, subMonths } from "date-fns";
 import { CalendarIcon, FileText, Download } from "lucide-react";
 import { useFinance } from "@/contexts/FinanceContext";
+import { ExpenseCategory } from "@/types/finance";
 import jsPDF from "jspdf";
+import 'jspdf-autotable';
+import Chart from 'chart.js/auto';
+import { createCanvas } from 'canvas';
 
 const reportFormSchema = z.object({
   month: z.date(),
@@ -58,9 +62,22 @@ interface ReportGeneratorModalProps {
 }
 
 export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorModalProps) {
-  const { totalIncome, totalExpenses, netCashflow, savingsRate } = useFinance();
+  const { 
+    totalIncome, 
+    totalExpenses, 
+    netCashflow, 
+    savingsRate,
+    expenses,
+    incomes,
+    budgets,
+    goals,
+    recommendations,
+    activeMonth,
+    months
+  } = useFinance();
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportGenerated, setReportGenerated] = useState(false);
+  const chartRef = useRef<HTMLCanvasElement | null>(null);
   
   const form = useForm<ReportFormValues>({
     resolver: zodResolver(reportFormSchema),
@@ -83,6 +100,202 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     
     setIsGenerating(false);
     setReportGenerated(true);
+  }
+  
+  // Create pie chart for PDF
+  function createExpensePieChart(): string {
+    // Create canvas element
+    const canvas = createCanvas(400, 300);
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data for the chart
+    const expensesByCategory = Object.values(ExpenseCategory).map(category => {
+      const totalForCategory = expenses
+        .filter(expense => expense.category === category)
+        .reduce((total, expense) => total + expense.amount, 0);
+      
+      return {
+        category,
+        total: totalForCategory
+      };
+    }).filter(item => item.total > 0);
+    
+    // Colors for the chart
+    const COLORS = [
+      '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', 
+      '#82CA9D', '#FFAF8A', '#D0ED57', '#FFC658', '#A28BFF'
+    ];
+    
+    // Create the chart
+    new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: expensesByCategory.map(item => item.category),
+        datasets: [{
+          data: expensesByCategory.map(item => item.total),
+          backgroundColor: COLORS,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              boxWidth: 10,
+              font: {
+                size: 10
+              }
+            }
+          },
+          title: {
+            display: true,
+            text: 'Expenses by Category',
+            font: {
+              size: 14
+            }
+          }
+        }
+      }
+    });
+    
+    // Convert canvas to image data URL
+    return canvas.toDataURL('image/png');
+  }
+  
+  // Create budget bar chart for PDF
+  function createBudgetComparisonChart(): string {
+    // Create canvas element
+    const canvas = createCanvas(400, 300);
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data for the chart
+    const budgetData = budgets.map(budget => ({
+      category: budget.category,
+      limit: budget.limit,
+      spent: budget.spent,
+      percentage: budget.limit > 0 ? Math.min(100, (budget.spent / budget.limit) * 100) : 0
+    })).sort((a, b) => b.percentage - a.percentage).slice(0, 6); // Top 6 budgets
+    
+    // Create the chart
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: budgetData.map(item => item.category),
+        datasets: [
+          {
+            label: 'Budget Limit',
+            data: budgetData.map(item => item.limit),
+            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'Actual Spent',
+            data: budgetData.map(item => item.spent),
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Amount ($)'
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Budget vs. Actual Spending',
+            font: {
+              size: 14
+            }
+          },
+          legend: {
+            position: 'bottom'
+          }
+        }
+      }
+    });
+    
+    // Convert canvas to image data URL
+    return canvas.toDataURL('image/png');
+  }
+  
+  // Create goal progress chart for PDF
+  function createGoalProgressChart(): string {
+    // Create canvas element
+    const canvas = createCanvas(400, 300);
+    const ctx = canvas.getContext('2d');
+    
+    // Prepare data - get top 5 goals
+    const goalData = goals
+      .filter(goal => goal.targetAmount > 0)
+      .map(goal => ({
+        name: goal.description,
+        current: goal.currentAmount,
+        target: goal.targetAmount,
+        percentage: Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)
+      }))
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(0, 5);
+    
+    // Create the chart
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: goalData.map(item => item.name),
+        datasets: [{
+          label: 'Progress (%)',
+          data: goalData.map(item => item.percentage),
+          backgroundColor: goalData.map(item => 
+            item.percentage < 25 ? 'rgba(255, 99, 132, 0.7)' : 
+            item.percentage < 75 ? 'rgba(255, 206, 86, 0.7)' : 
+            'rgba(75, 192, 192, 0.7)'
+          ),
+          borderColor: goalData.map(item => 
+            item.percentage < 25 ? 'rgba(255, 99, 132, 1)' : 
+            item.percentage < 75 ? 'rgba(255, 206, 86, 1)' : 
+            'rgba(75, 192, 192, 1)'
+          ),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: false,
+        scales: {
+          x: {
+            beginAtZero: true,
+            max: 100,
+            title: {
+              display: true,
+              text: 'Progress (%)'
+            }
+          }
+        },
+        plugins: {
+          title: {
+            display: true,
+            text: 'Goal Progress',
+            font: {
+              size: 14
+            }
+          }
+        }
+      }
+    });
+    
+    // Convert canvas to image data URL
+    return canvas.toDataURL('image/png');
   }
   
   function handleDownload() {
@@ -142,47 +355,240 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
     doc.setDrawColor(200, 200, 200);
     doc.line(20, 100, 190, 100);
     
-    // Insights & Recommendations section
-    doc.setFontSize(16);
-    doc.setTextColor(0, 0, 0);
-    doc.text("Financial Insights", 20, 110);
+    let yPosition = 110;
     
-    // Add some insights based on the data
-    doc.setFontSize(12);
-    let y = 120;
-    
-    if (netCashflow >= 0) {
-      doc.text("• Your income is greater than your expenses, which is a positive sign.", 30, y);
-      y += 8;
-      doc.text(`• With a savings rate of ${savingsRate.toFixed(1)}%, you're building financial security.`, 30, y);
-    } else {
-      doc.text("• Your expenses are exceeding your income, which may lead to financial strain.", 30, y);
-      y += 8;
-      doc.text("• Consider reviewing your budget to find areas where you can reduce spending.", 30, y);
+    // Include Expense Breakdown if selected
+    if (form.getValues("includeExpenses")) {
+      // Add expense breakdown section
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Expense Breakdown", 20, yPosition);
+      yPosition += 10;
+      
+      // Add expense pie chart
+      if (expenses.length > 0) {
+        const expenseChartData = createExpensePieChart();
+        doc.addImage(expenseChartData, 'PNG', 30, yPosition, 150, 110);
+        yPosition += 120;
+        
+        // Add expense table
+        doc.setFontSize(14);
+        doc.text("Expense Details", 20, yPosition);
+        yPosition += 10;
+        
+        const expensesByCategory = Object.values(ExpenseCategory)
+          .map(category => {
+            const expensesInCategory = expenses.filter(e => e.category === category);
+            const total = expensesInCategory.reduce((sum, e) => sum + e.amount, 0);
+            return { category, total, count: expensesInCategory.length };
+          })
+          .filter(item => item.total > 0)
+          .sort((a, b) => b.total - a.total);
+        
+        // Create expense table data
+        const expenseTableData = expensesByCategory.map(item => [
+          item.category,
+          `$${item.total.toFixed(2)}`,
+          item.count.toString(),
+          `${((item.total / totalExpenses) * 100).toFixed(1)}%`
+        ]);
+        
+        // Add expense table to PDF
+        (doc as any).autoTable({
+          head: [['Category', 'Amount', 'Count', '% of Total']],
+          body: expenseTableData,
+          startY: yPosition,
+          theme: 'grid',
+          headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+          alternateRowStyles: { fillColor: [240, 240, 240] },
+          margin: { top: 10 }
+        });
+        
+        yPosition = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.setFontSize(12);
+        doc.text("No expense data available for the selected period.", 30, yPosition);
+        yPosition += 20;
+      }
+      
+      // Check if we need to add a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
     }
     
-    y += 16;
-    doc.setFontSize(16);
-    doc.text("Recommendations", 20, y);
-    
-    y += 10;
-    doc.setFontSize(12);
-    if (savingsRate < 20) {
-      doc.text("• Try to increase your savings rate to at least 20% for long-term financial health.", 30, y);
-      y += 8;
+    // Add Budget section if selected
+    if (form.getValues("includeBudgets")) {
+      doc.setFontSize(16);
+      doc.text("Budget Analysis", 20, yPosition);
+      yPosition += 10;
+      
+      if (budgets.length > 0) {
+        // Add budget comparison chart
+        const budgetChartData = createBudgetComparisonChart();
+        doc.addImage(budgetChartData, 'PNG', 30, yPosition, 150, 110);
+        yPosition += 120;
+        
+        // Add budget table
+        doc.setFontSize(14);
+        doc.text("Budget Details", 20, yPosition);
+        yPosition += 10;
+        
+        // Create budget table data
+        const budgetTableData = budgets
+          .sort((a, b) => (b.spent / b.limit) - (a.spent / a.limit))
+          .map(budget => [
+            budget.category,
+            `$${budget.limit.toFixed(2)}`,
+            `$${budget.spent.toFixed(2)}`,
+            `${budget.limit > 0 ? Math.min(100, (budget.spent / budget.limit) * 100).toFixed(1) : 0}%`,
+            budget.limit > 0 && budget.spent > budget.limit ? 'Over Budget' : 'Within Budget'
+          ]);
+        
+        // Add budget table to PDF
+        (doc as any).autoTable({
+          head: [['Category', 'Budget Limit', 'Spent', '% Used', 'Status']],
+          body: budgetTableData,
+          startY: yPosition,
+          theme: 'grid',
+          headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+          alternateRowStyles: { fillColor: [240, 240, 240] },
+          margin: { top: 10 }
+        });
+        
+        yPosition = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.setFontSize(12);
+        doc.text("No budget data available for the selected period.", 30, yPosition);
+        yPosition += 20;
+      }
+      
+      // Check if we need to add a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
     }
     
-    if (totalIncome > 0) {
-      doc.text("• Consider setting up an emergency fund with 3-6 months of expenses.", 30, y);
-      y += 8;
+    // Add Goals section if selected
+    if (form.getValues("includeGoals")) {
+      doc.setFontSize(16);
+      doc.text("Goal Progress", 20, yPosition);
+      yPosition += 10;
+      
+      if (goals.length > 0) {
+        // Add goal progress chart
+        const goalChartData = createGoalProgressChart();
+        doc.addImage(goalChartData, 'PNG', 30, yPosition, 150, 110);
+        yPosition += 120;
+        
+        // Add goal table
+        doc.setFontSize(14);
+        doc.text("Goal Details", 20, yPosition);
+        yPosition += 10;
+        
+        // Create goal table data
+        const goalTableData = goals.map(goal => [
+          goal.description,
+          `$${goal.targetAmount.toFixed(2)}`,
+          `$${goal.currentAmount.toFixed(2)}`,
+          `${((goal.currentAmount / goal.targetAmount) * 100).toFixed(1)}%`,
+          format(new Date(goal.targetDate), 'MMM dd, yyyy')
+        ]);
+        
+        // Add goal table to PDF
+        (doc as any).autoTable({
+          head: [['Goal', 'Target Amount', 'Current Amount', 'Progress', 'Target Date']],
+          body: goalTableData,
+          startY: yPosition,
+          theme: 'grid',
+          headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+          alternateRowStyles: { fillColor: [240, 240, 240] },
+          margin: { top: 10 }
+        });
+        
+        yPosition = (doc as any).lastAutoTable.finalY + 15;
+      } else {
+        doc.setFontSize(12);
+        doc.text("No goal data available.", 30, yPosition);
+        yPosition += 20;
+      }
+      
+      // Check if we need to add a new page
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
     }
     
-    doc.text("• Review your spending patterns to identify opportunities for saving.", 30, y);
+    // Add Recommendations section if selected
+    if (form.getValues("includeRecommendations")) {
+      // Add page for recommendations if needed
+      if (yPosition > 200) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text("Financial Insights & Recommendations", 20, yPosition);
+      yPosition += 15;
+      
+      // Add some insights based on the data
+      doc.setFontSize(12);
+      
+      if (netCashflow >= 0) {
+        doc.text("• Your income is greater than your expenses, which is a positive sign.", 30, yPosition);
+        yPosition += 8;
+        doc.text(`• With a savings rate of ${savingsRate.toFixed(1)}%, you're building financial security.`, 30, yPosition);
+        yPosition += 8;
+      } else {
+        doc.text("• Your expenses are exceeding your income, which may lead to financial strain.", 30, yPosition);
+        yPosition += 8;
+        doc.text("• Consider reviewing your budget to find areas where you can reduce spending.", 30, yPosition);
+        yPosition += 8;
+      }
+      
+      // Add recommendations from AI if available
+      if (recommendations.length > 0) {
+        yPosition += 10;
+        doc.setFontSize(14);
+        doc.text("AI-Generated Recommendations", 20, yPosition);
+        yPosition += 10;
+        
+        recommendations.slice(0, 3).forEach(rec => {
+          doc.setFontSize(12);
+          doc.text(`• ${rec.message}`, 30, yPosition);
+          yPosition += 8;
+        });
+      } else {
+        // Add generic recommendations
+        yPosition += 10;
+        if (savingsRate < 20) {
+          doc.text("• Try to increase your savings rate to at least 20% for long-term financial health.", 30, yPosition);
+          yPosition += 8;
+        }
+        
+        if (totalIncome > 0) {
+          doc.text("• Consider setting up an emergency fund with 3-6 months of expenses.", 30, yPosition);
+          yPosition += 8;
+        }
+        
+        doc.text("• Review your spending patterns to identify opportunities for saving.", 30, yPosition);
+        yPosition += 8;
+      }
+    }
     
-    // Footer
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Finance Tracker App - Confidential Financial Report", 105, 280, { align: "center" });
+    // Footer on all pages
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: "center" });
+      doc.text("Finance Tracker App - Confidential Financial Report", 105, 280, { align: "center" });
+    }
     
     // Save the PDF
     doc.save(fileName);
