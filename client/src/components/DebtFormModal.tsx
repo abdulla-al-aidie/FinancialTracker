@@ -52,15 +52,15 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
   // State for priority slider
   const [priority, setPriority] = useState<number>(5);
 
-  // Set up form with default values
+  // Set up form with empty default values for new entries
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtFormSchema),
     defaultValues: {
       name: "",
-      balance: 0,
-      originalPrincipal: 0,
-      interestRate: 0,
-      minimumPayment: 0,
+      balance: undefined,
+      originalPrincipal: undefined,
+      interestRate: undefined,
+      minimumPayment: undefined,
       dueDate: new Date(),
       priority: 5,
     }
@@ -69,6 +69,7 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
   // Set form values and priority when in edit mode or when debt changes
   useEffect(() => {
     if (debt && open) {
+      // For editing existing entries - populate with debt data
       form.reset({
         name: debt.name,
         balance: debt.balance,
@@ -83,6 +84,20 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
       if (debt.priority !== undefined) {
         setPriority(debt.priority);
       }
+    } else if (open) {
+      // For new entries - reset to blank form
+      form.reset({
+        name: "",
+        balance: undefined,
+        originalPrincipal: undefined,
+        interestRate: undefined,
+        minimumPayment: undefined,
+        dueDate: new Date(),
+        priority: 5,
+      });
+      
+      // Reset priority slider to default
+      setPriority(5);
     }
   }, [form, debt, open]);
   

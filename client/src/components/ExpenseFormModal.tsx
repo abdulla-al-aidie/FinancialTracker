@@ -47,25 +47,40 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
   const isEditMode = !!expense;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Set up form with default values
+  // Set up form with empty default values for new entries
   const form = useForm<ExpenseFormValues>({
     resolver: zodResolver(expenseFormSchema),
-    defaultValues: isEditMode
-      ? {
-          amount: expense.amount,
-          date: new Date(expense.date),
-          category: expense.category,
-          description: expense.description,
-          associatedDebtId: (expense as any).associatedDebtId,
-        }
-      : {
-          amount: 0,
-          date: new Date(),
-          category: ExpenseCategory.Miscellaneous,
-          description: "",
-          associatedDebtId: undefined,
-        },
+    defaultValues: {
+      amount: undefined,
+      date: new Date(),
+      category: ExpenseCategory.Miscellaneous,
+      description: "",
+      associatedDebtId: undefined,
+    }
   });
+  
+  // Set form values when opened or when expense changes
+  useEffect(() => {
+    if (expense && open) {
+      // For editing existing entries - populate with expense data
+      form.reset({
+        amount: expense.amount,
+        date: new Date(expense.date),
+        category: expense.category,
+        description: expense.description,
+        associatedDebtId: (expense as any).associatedDebtId,
+      });
+    } else if (open) {
+      // For new entries - reset to blank form
+      form.reset({
+        amount: undefined,
+        date: new Date(),
+        category: ExpenseCategory.Miscellaneous,
+        description: "",
+        associatedDebtId: undefined,
+      });
+    }
+  }, [form, expense, open]);
   
   // Auto-categorize when description changes if we're not in edit mode
   const watchDescription = form.watch("description");

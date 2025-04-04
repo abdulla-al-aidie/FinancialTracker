@@ -46,11 +46,11 @@ export default function IncomeFormModal({ open, onClose, income }: IncomeFormMod
   const isEditMode = !!income;
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   
-  // Set up form with default values
+  // Set up form with empty default values for new entries
   const form = useForm<IncomeFormValues>({
     resolver: zodResolver(incomeFormSchema),
     defaultValues: {
-      amount: 0,
+      amount: undefined,
       date: new Date(),
       type: IncomeType.Salary,
       description: "",
@@ -60,11 +60,20 @@ export default function IncomeFormModal({ open, onClose, income }: IncomeFormMod
   // Set form values when in edit mode or when income changes
   useEffect(() => {
     if (income && open) {
+      // For editing existing entries - populate with income data
       form.reset({
         amount: income.amount,
         date: new Date(income.date),
         type: income.type,
         description: income.description || "",
+      });
+    } else if (open) {
+      // For new entries - reset to blank form
+      form.reset({
+        amount: undefined,
+        date: new Date(),
+        type: IncomeType.Salary,
+        description: "",
       });
     }
   }, [form, income, open]);
