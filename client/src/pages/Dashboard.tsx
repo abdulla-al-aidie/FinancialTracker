@@ -63,7 +63,7 @@ import SurplusFundsRecommendation from "@/components/SurplusFundsRecommendation"
 import ActionableRecommendations from "@/components/ActionableRecommendations";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
-import AlertPreferencesModal from "@/components/AlertPreferencesModal";
+
 import GoalContributionModal from "@/components/GoalContributionModal";
 import UpdateFutureMonthsButton from "@/components/UpdateFutureMonthsButton";
 
@@ -100,7 +100,6 @@ export default function Dashboard() {
   const [currencyModalOpen, setCurrencyModalOpen] = useState(false);
   const [generateReportModalOpen, setGenerateReportModalOpen] = useState(false);
   const [emailSettingsModalOpen, setEmailSettingsModalOpen] = useState(false);
-  const [alertPreferencesModalOpen, setAlertPreferencesModalOpen] = useState(false);
   const [goalContributionModalOpen, setGoalContributionModalOpen] = useState(false);
   
   // State for selected items for editing
@@ -1169,20 +1168,13 @@ export default function Dashboard() {
                   
                   <div className="space-y-2">
                     <h3 className="text-sm font-medium">Notifications</h3>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div>
                       <Button 
                         variant="outline" 
                         className="w-full"
                         onClick={() => setEmailSettingsModalOpen(true)}
                       >
                         Email Settings
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full"
-                        onClick={() => setAlertPreferencesModalOpen(true)}
-                      >
-                        Alert Preferences
                       </Button>
                     </div>
                   </div>
@@ -1275,16 +1267,12 @@ export default function Dashboard() {
         onClose={() => setGenerateReportModalOpen(false)}
       />
       
-      {/* Email and Alert Settings Modals */}
+      {/* Email Settings Modal */}
       <EmailSettingsModal
         open={emailSettingsModalOpen}
         onClose={() => setEmailSettingsModalOpen(false)}
       />
-      
-      <AlertPreferencesModal
-        open={alertPreferencesModalOpen}
-        onClose={() => setAlertPreferencesModalOpen(false)}
-      />
+
     </div>
   );
 }
