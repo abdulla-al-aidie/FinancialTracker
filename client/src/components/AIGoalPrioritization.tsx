@@ -176,16 +176,35 @@ export default function AIGoalPrioritization() {
                   <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Progress:</span>
                     <span className="text-sm font-medium">
-                      ${goal.currentAmount.toLocaleString()} of ${goal.targetAmount.toLocaleString()}
+                      ${(() => {
+                        // Calculate total progress the same way as in Dashboard.tsx
+                        const monthlyProgress = goal.monthlyProgress || {};
+                        const totalProgress = Object.values(monthlyProgress).reduce(
+                          (sum, amount) => sum + amount, 0
+                        );
+                        return totalProgress.toLocaleString();
+                      })()} of ${goal.targetAmount.toLocaleString()}
                       {" "}
-                      ({Math.round((goal.currentAmount / goal.targetAmount) * 100)}%)
+                      ({(() => {
+                        const monthlyProgress = goal.monthlyProgress || {};
+                        const totalProgress = Object.values(monthlyProgress).reduce(
+                          (sum, amount) => sum + amount, 0
+                        );
+                        return Math.round((totalProgress / goal.targetAmount) * 100);
+                      })()}%)
                     </span>
                   </div>
                   <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-primary" 
                       style={{ 
-                        width: `${Math.min(100, (goal.currentAmount / goal.targetAmount) * 100)}%`
+                        width: `${(() => {
+                          const monthlyProgress = goal.monthlyProgress || {};
+                          const totalProgress = Object.values(monthlyProgress).reduce(
+                            (sum, amount) => sum + amount, 0
+                          );
+                          return Math.min(100, (totalProgress / goal.targetAmount) * 100);
+                        })()}%`
                       }}
                     />
                   </div>
