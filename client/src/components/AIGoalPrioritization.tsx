@@ -91,27 +91,14 @@ export default function AIGoalPrioritization() {
     }
   };
 
-  // Function to render priority badge with appropriate color
-  const renderPriorityBadge = (priority: number | undefined) => {
-    // Set default priority to 5 (medium) if not explicitly set
-    const priorityValue = priority !== undefined ? priority : 5;
-    
-    if (priorityValue >= 8) {
-      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
-    } else if (priorityValue >= 5) {
-      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
-    } else {
-      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
-    }
+  // Empty functions to return null instead of badges
+  const renderPriorityBadge = () => {
+    return null;
   };
 
-  // Function to render goal type badge
-  const renderGoalTypeBadge = (type: GoalType) => {
-    if (type === GoalType.Saving) {
-      return <Badge variant="secondary">Saving</Badge>;
-    } else {
-      return <Badge variant="secondary">Debt Payoff</Badge>;
-    }
+  // Function to render goal type badge (returns null)
+  const renderGoalTypeBadge = () => {
+    return null;
   };
 
   // Sort goals by priority (highest first)
