@@ -487,7 +487,7 @@ HISTORICAL EXPENSES:`;
 
         for (const monthData of historicalExpenses) {
           if (monthData.expenses && monthData.expenses.length > 0) {
-            const monthTotal = monthData.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+            const monthTotal = monthData.expenses.reduce((sum: number, exp: any) => sum + parseFloat(exp.amount), 0);
             
             historicalExpenseText += `
 Month: ${monthData.monthId}
@@ -1356,13 +1356,16 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
               const newDebt = {
                 name: debt.name,
                 balance: String(debt.balance), // Convert to string for numeric column
+                originalPrincipal: String(debt.balance), // Set original principal to match initial balance
                 interestRate: debt.interestRate ? String(debt.interestRate) : null,
                 minimumPayment: debt.minimumPayment ? String(debt.minimumPayment) : null,
                 priority: debt.priority || 0,
                 dueDate: debt.dueDate instanceof Date ? debt.dueDate : (debt.dueDate ? new Date(debt.dueDate) : null),
                 userId: 1,
                 monthId: activeMonth,
-                createdAt: new Date()
+                createdAt: new Date(),
+                totalPaid: "0", // Initialize with zero paid
+                isPaidOff: false // Initialize as not paid off
               };
               
               await storage.createDebt(newDebt);
@@ -1542,23 +1545,99 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
         });
       }
       
+      // Log how much data we're about to save
+      console.log(`Saving ${Object.keys(data).length} keys to Replit DB: ${Object.keys(data).join(', ')}`);
+      
+      // First, clear any existing data with this prefix to prevent stale data
+      try {
+        const existingKeys = await replitDb.list(DB_PREFIX);
+        if (Array.isArray(existingKeys) && existingKeys.length > 0) {
+          console.log(`Clearing ${existingKeys.length} existing keys before save: ${existingKeys.join(', ')}`);
+          for (const key of existingKeys) {
+            await replitDb.delete(key);
+          }
+        }
+      } catch (clearError) {
+        console.error("Error clearing existing keys:", clearError);
+        // Continue anyway
+      }
+      
       // Save each key-value pair to the database
       for (const key of Object.keys(data)) {
         const prefixedKey = `${DB_PREFIX}${key}`;
-        await replitDb.set(prefixedKey, JSON.stringify(data[key]));
+        try {
+          await replitDb.set(prefixedKey, JSON.stringify(data[key]));
+          console.log(`Saved key ${prefixedKey}`);
+        } catch (setError) {
+          console.error(`Error saving key ${key}:`, setError);
+          // Continue with other keys anyway
+        }
       }
       
       // Set the last save time
       await replitDb.set(`${DB_PREFIX}lastAutoSaveTime`, new Date().toISOString());
       
+      // Verify keys were saved by listing them
+      const savedKeys = await replitDb.list(DB_PREFIX);
+      const keyCount = Array.isArray(savedKeys) ? savedKeys.length : 0;
+      
+      const keysArray = Array.isArray(savedKeys) ? savedKeys : [];
+      console.log(`Saved ${keyCount} keys to Replit DB: ${keysArray.length > 0 ? keysArray.join(', ') : 'none'}`);
+      
       res.json({
         success: true,
-        message: "Data saved successfully"
+        message: "Data saved successfully",
+        keysCount: keyCount,
+        keys: savedKeys
       });
     } catch (error) {
       console.error(`Error saving data to Replit DB:`, error);
       res.status(500).json({
         error: "Failed to save data",
+        message: error instanceof Error ? error.message : "Unknown error occurred"
+      });
+    }
+  });
+  
+  // Special emergency endpoint to force a full backup of localStorage to a single DB key
+  app.post("/api/replit-db/emergency-backup", async (req, res) => {
+    try {
+      const { data } = req.body;
+      
+      if (!data) {
+        return res.status(400).json({
+          error: "Invalid request",
+          message: "No data provided for backup"
+        });
+      }
+      
+      // Save all data as a single compressed JSON record
+      const backupKey = `${DB_PREFIX}emergency_backup`;
+      console.log(`Creating emergency backup to key ${backupKey}`);
+      
+      // First convert the data to a string
+      const dataString = JSON.stringify(data);
+      console.log(`Backup data size: ${dataString.length} characters`);
+      
+      // Save it to the DB
+      await replitDb.set(backupKey, dataString);
+      
+      // Set a backup timestamp
+      const timestamp = new Date().toISOString();
+      await replitDb.set(`${DB_PREFIX}emergency_backup_time`, timestamp);
+      
+      console.log("Emergency backup completed successfully");
+      
+      res.json({
+        success: true,
+        message: "Emergency backup completed successfully",
+        timestamp: timestamp,
+        dataSize: dataString.length
+      });
+    } catch (error) {
+      console.error(`Error during emergency backup:`, error);
+      res.status(500).json({
+        error: "Failed to create emergency backup",
         message: error instanceof Error ? error.message : "Unknown error occurred"
       });
     }
@@ -1608,11 +1687,7 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
         messages: [
           {
             role: "system",
-            content: `You are a financial advisor AI specializing in optimizing surplus fund allocation.
-            Your task is to analyze a user's financial situation including surplus funds, debts, goals, and emergency fund status,
-            then recommend the best ways to allocate their surplus funds.
-            Always prioritize high-interest debt repayment and emergency fund establishment before other goals.
-            Structure your response exactly as requested in JSON format.`
+            content: "You are a financial advisor AI specializing in optimizing surplus fund allocation. Your task is to analyze a user's financial situation including surplus funds, debts, goals, and emergency fund status, then recommend the best ways to allocate their surplus funds. Always prioritize high-interest debt repayment and emergency fund establishment before other goals. Structure your response exactly as requested in JSON format."
           },
           {
             role: "user",
@@ -1650,7 +1725,8 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
         max_tokens: 2000,
       });
       
-      const recommendations = JSON.parse(response.choices[0].message.content);
+      const content = response.choices[0].message.content || '{}';
+      const recommendations = JSON.parse(content);
       res.json(recommendations);
     } catch (error) {
       console.error("Error generating surplus fund recommendations:", error);

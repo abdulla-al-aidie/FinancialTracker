@@ -2,9 +2,19 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Save, Check, AlertCircle, Cloud } from "lucide-react";
+import { Save, Check, AlertCircle, Cloud, Shield } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getLastSaveTime, saveFromLocalStorage } from "@/utils/database";
+import { 
+  getLastSaveTime, 
+  saveFromLocalStorage,
+  createEmergencyBackup
+} from "@/utils/database";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function SaveButton() {
   const [isSaving, setIsSaving] = useState(false);
@@ -102,49 +112,97 @@ export default function SaveButton() {
     }
   };
   
+  // Emergency backup handler
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  
+  const handleEmergencyBackup = async () => {
+    setIsCreatingBackup(true);
+    
+    try {
+      const success = await createEmergencyBackup();
+      
+      if (success) {
+        toast({
+          title: "Emergency Backup Created",
+          description: "A complete backup of all your financial data has been saved to Replit's database.",
+          variant: "default"
+        });
+      } else {
+        throw new Error("Backup failed");
+      }
+    } catch (error) {
+      console.error("Error creating emergency backup:", error);
+      toast({
+        title: "Backup Failed",
+        description: "There was an error creating your emergency backup. Please try again later.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            className="w-full"
-            variant={autoSaved ? "outline" : "default"}
-            onClick={saveDataToDb}
-            disabled={isSaving || hasMigrated}
-          >
-            {isSaving ? (
-              <>
-                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
-                Saving...
-              </>
-            ) : hasMigrated ? (
-              <>
-                <Cloud className="mr-2 h-4 w-4 text-green-500" />
-                Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
-              </>
-            ) : autoSaved ? (
-              <>
-                <Check className="mr-2 h-4 w-4 text-green-500" />
-                Save
-              </>
-            ) : (
-              <>
-                <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
-                Save
-              </>
-            )}
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p className="w-[250px] text-sm">
-            {hasMigrated 
-              ? "Your data is now safely stored in Replit's database. Changes are automatically saved."
-              : "Click to save your data to Replit's database for improved reliability across sessions."
-            }
-            {lastSaved && ` Last saved: ${getTimeAgo(lastSaved)}`}
-          </p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="flex flex-col gap-2">
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  className="w-full flex justify-between"
+                  variant={autoSaved ? "outline" : "default"}
+                  disabled={isSaving || isCreatingBackup}
+                >
+                  <div className="flex items-center">
+                    {isSaving || isCreatingBackup ? (
+                      <>
+                        <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+                        {isSaving ? "Saving..." : "Creating Backup..."}
+                      </>
+                    ) : hasMigrated ? (
+                      <>
+                        <Cloud className="mr-2 h-4 w-4 text-green-500" />
+                        Saved {lastSaved ? getTimeAgo(lastSaved) : ""}
+                      </>
+                    ) : autoSaved ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4 text-green-500" />
+                        Save Data
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="mr-2 h-4 w-4 text-amber-500" />
+                        Save Data
+                      </>
+                    )}
+                  </div>
+                  <span className="ml-2">▼</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={saveDataToDb} disabled={isSaving || isCreatingBackup}>
+                  <Cloud className="mr-2 h-4 w-4" />
+                  Standard Save
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleEmergencyBackup} disabled={isSaving || isCreatingBackup}>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Emergency Backup
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="w-[250px] text-sm">
+              {hasMigrated 
+                ? "Your data is stored in Replit's database. Use backup options for additional protection."
+                : "Save your data to prevent loss. Regular saves store your data by category, emergency backups create a complete snapshot."
+              }
+              {lastSaved && ` Last saved: ${getTimeAgo(lastSaved)}`}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </div>
   );
 }

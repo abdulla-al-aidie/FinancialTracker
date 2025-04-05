@@ -39,6 +39,10 @@ export const getFromDb = async (key: string): Promise<any> => {
     }
     
     const result = await response.json();
+    if (!result || result.data === null || result.data === undefined) {
+      return null;
+    }
+    
     return result.data;
   } catch (error) {
     console.error(`Error retrieving ${key} from database:`, error);
@@ -55,15 +59,27 @@ export const getLastSaveTime = async (): Promise<string | null> => {
     const response = await fetch('/api/replit-db/last-save-time');
     
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to get last save time');
+      console.warn(`Error response from last-save-time API: ${response.status}`);
+      return null;
     }
     
     const result = await response.json();
-    return result.timestamp;
+    
+    // Handle different response formats
+    if (result && result.timestamp) {
+      if (typeof result.timestamp === 'string') {
+        return result.timestamp;
+      } else if (result.timestamp.ok && result.timestamp.value) {
+        return result.timestamp.value;
+      }
+    }
+    
+    // Fallback to localStorage if we can't get from server
+    return localStorage.getItem('lastAutoSaveTime');
   } catch (error) {
     console.error("Error retrieving last save time:", error);
-    return null;
+    // Fallback to localStorage
+    return localStorage.getItem('lastAutoSaveTime');
   }
 };
 
@@ -118,43 +134,65 @@ export const saveFromLocalStorage = async (): Promise<void> => {
     // Collect all data to save in a single object
     const dataToSave: Record<string, any> = {};
     
-    // Save common keys
-    const keysToSave = [
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    
+    // First, explicitly save known important keys
+    const importantKeys = [
       'months', 'goals', 'debts', 'scenarios', 'userProfile'
     ];
     
-    for (const key of keysToSave) {
+    for (const key of importantKeys) {
       const data = localStorage.getItem(key);
       if (data) {
-        dataToSave[key] = JSON.parse(data);
+        try {
+          dataToSave[key] = JSON.parse(data);
+        } catch (e) {
+          console.warn(`Failed to parse JSON for key ${key}, using raw value`);
+          dataToSave[key] = data;
+        }
       }
     }
     
-    // Save month-specific data
-    const monthsData = localStorage.getItem('months');
-    if (monthsData) {
-      const months = JSON.parse(monthsData);
+    // Then, look for all month-specific keys
+    for (const key of allKeys) {
+      // Skip keys we've already processed
+      if (importantKeys.includes(key)) continue;
       
-      for (const month of months) {
-        const monthId = month.id;
-        
-        // Save month-specific data
-        const monthKeys = [
-          `incomes_${monthId}`,
-          `expenses_${monthId}`,
-          `budgets_${monthId}`,
-          `goals_${monthId}`,
-          `debts_${monthId}`
-        ];
-        
-        for (const key of monthKeys) {
-          const data = localStorage.getItem(key);
-          if (data) {
+      // Process month-specific data (keys like incomes_2025-04)
+      if (key.match(/^(incomes|expenses|budgets|goals|debts)_\d{4}-\d{2}$/)) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          try {
             dataToSave[key] = JSON.parse(data);
+          } catch (e) {
+            console.warn(`Failed to parse JSON for key ${key}, using raw value`);
+            dataToSave[key] = data;
           }
         }
       }
     }
+    
+    // Finally, save recommendations, alerts and any other remaining financial data
+    for (const key of allKeys) {
+      if (key.startsWith('recommendations') || 
+          key.startsWith('alerts') || 
+          key.startsWith('savings_') || 
+          key.startsWith('scenarios_')) {
+        const data = localStorage.getItem(key);
+        if (data) {
+          try {
+            dataToSave[key] = JSON.parse(data);
+          } catch (e) {
+            console.warn(`Failed to parse JSON for key ${key}, using raw value`);
+            dataToSave[key] = data;
+          }
+        }
+      }
+    }
+    
+    console.log(`Saving ${Object.keys(dataToSave).length} keys to Replit DB:`, 
+      Object.keys(dataToSave).join(', '));
     
     // Send all data to the server in a single request
     const response = await fetch('/api/replit-db/save-all', {
@@ -171,9 +209,63 @@ export const saveFromLocalStorage = async (): Promise<void> => {
     }
     
     console.log('Saving from localStorage to Replit DB completed successfully');
+    
+    // Update the last save time in localStorage to match the server
+    localStorage.setItem('lastAutoSaveTime', new Date().toISOString());
   } catch (error) {
     console.error('Error during save from localStorage to Replit DB:', error);
     throw error; // Re-throw to allow caller to handle
+  }
+};
+
+/**
+ * Create an emergency backup of all localStorage data
+ * This saves everything as a single large record for disaster recovery
+ */
+export const createEmergencyBackup = async (): Promise<boolean> => {
+  try {
+    // Get all data from localStorage
+    const allData: Record<string, any> = {};
+    
+    // Get all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        const value = localStorage.getItem(key);
+        if (value) {
+          try {
+            // Try to parse it as JSON, but if it fails, store as string
+            allData[key] = JSON.parse(value);
+          } catch (e) {
+            allData[key] = value;
+          }
+        }
+      }
+    }
+    
+    console.log(`Creating emergency backup with ${Object.keys(allData).length} keys`);
+    
+    // Send all data to the server as a single object
+    const response = await fetch('/api/replit-db/emergency-backup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: allData }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create emergency backup');
+    }
+    
+    const result = await response.json();
+    console.log('Emergency backup completed successfully:', result);
+    
+    return true;
+  } catch (error) {
+    console.error('Error creating emergency backup:', error);
+    return false;
   }
 };
 
@@ -215,38 +307,72 @@ export const loadAllFinanceData = async (): Promise<{
     for (const key of allKeys) {
       const data = await getFromDb(key);
       
-      if (!data || !data.ok) continue;
+      if (!data) continue;
       
-      const value = data.value;
+      let value;
+      
+      // Handle different response formats
+      if (typeof data === 'object' && data.ok !== undefined) {
+        // It's in the {ok: true, value: string} format
+        if (!data.ok) continue;
+        value = data.value;
+      } else {
+        // It's another format or directly the value
+        value = data;
+      }
+      
+      // Make sure we have a valid value
+      if (value === null || value === undefined) continue;
+      
+      // Parse the value if it's a string
+      let parsedValue = value;
+      if (typeof value === 'string') {
+        try {
+          parsedValue = JSON.parse(value);
+        } catch (e) {
+          console.warn(`Failed to parse JSON for key ${key}, using raw value`);
+          parsedValue = value;
+        }
+      }
       
       // Handle different types of data
       if (key === 'userProfile') {
-        result.userProfile = typeof value === 'string' ? JSON.parse(value) : value;
+        result.userProfile = parsedValue;
       } else if (key === 'months') {
-        result.months = typeof value === 'string' ? JSON.parse(value) : value;
+        result.months = parsedValue;
       } else if (key === 'scenarios') {
-        result.scenarios = typeof value === 'string' ? JSON.parse(value) : value;
+        result.scenarios = parsedValue;
       } else if (key === 'recommendations') {
-        result.recommendations = typeof value === 'string' ? JSON.parse(value) : value;
+        result.recommendations = parsedValue;
       } else if (key === 'alerts') {
-        result.alerts = typeof value === 'string' ? JSON.parse(value) : value;
+        result.alerts = parsedValue;
       } else if (key.startsWith('incomes_')) {
         const monthId = key.replace('incomes_', '');
-        result.allIncomes[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+        result.allIncomes[monthId] = parsedValue;
       } else if (key.startsWith('expenses_')) {
         const monthId = key.replace('expenses_', '');
-        result.allExpenses[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+        result.allExpenses[monthId] = parsedValue;
       } else if (key.startsWith('budgets_')) {
         const monthId = key.replace('budgets_', '');
-        result.allBudgets[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+        result.allBudgets[monthId] = parsedValue;
       } else if (key.startsWith('goals_')) {
         const monthId = key.replace('goals_', '');
-        result.allGoals[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+        result.allGoals[monthId] = parsedValue;
       } else if (key.startsWith('debts_')) {
         const monthId = key.replace('debts_', '');
-        result.allDebts[monthId] = typeof value === 'string' ? JSON.parse(value) : value;
+        result.allDebts[monthId] = parsedValue;
       }
     }
+    
+    console.log("Loaded data from database:", {
+      userProfile: !!Object.keys(result.userProfile).length,
+      months: result.months.length,
+      allIncomes: Object.keys(result.allIncomes).length,
+      allExpenses: Object.keys(result.allExpenses).length,
+      allBudgets: Object.keys(result.allBudgets).length,
+      allGoals: Object.keys(result.allGoals).length,
+      allDebts: Object.keys(result.allDebts).length
+    });
     
     return result;
   } catch (error) {
