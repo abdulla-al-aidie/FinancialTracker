@@ -1564,6 +1564,100 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
     }
   });
   
+  // Handle surplus funds allocation recommendations
+  app.post("/api/openai/surplus-recommendations", async (req, res) => {
+    try {
+      if (!apiKey) {
+        return res.status(400).json({
+          error: "API key missing",
+          message: "OpenAI API key is not configured."
+        });
+      }
+
+      const data = req.body;
+      const { 
+        surplus, 
+        financialSituation, 
+        debts, 
+        goals, 
+        investmentPreference = 'moderate', 
+        timeline = 'medium' 
+      } = data;
+      
+      // Format debt information
+      const debtsInfo = debts.length > 0 
+        ? debts.map((debt: any) => 
+            `- ${debt.name}: Balance $${debt.balance}, Interest Rate ${debt.interestRate}%, Minimum Payment $${debt.minimumPayment}`
+          ).join("\n") 
+        : "No outstanding debts";
+      
+      // Format goals information
+      const goalsInfo = goals.length > 0 
+        ? goals.map((goal: any) => 
+            `- ${goal.name} (${goal.type}): Target $${goal.targetAmount}, Current Progress $${goal.currentAmount} (${Math.round((goal.currentAmount / goal.targetAmount) * 100)}%)${goal.targetDate ? `, Target Date: ${goal.targetDate}` : ""}`
+          ).join("\n") 
+        : "No active financial goals";
+      
+      // Emergency fund status
+      const emergencyFund = financialSituation.emergencyFundStatus;
+      const emergencyFundInfo = `Emergency Fund: $${emergencyFund.currentAmount} of $${emergencyFund.targetAmount} target (${emergencyFund.monthsOfExpensesCovered.toFixed(1)} months of expenses covered)`;
+      
+      // Make API call to OpenAI
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+        messages: [
+          {
+            role: "system",
+            content: `You are a financial advisor AI specializing in optimizing surplus fund allocation.
+            Your task is to analyze a user's financial situation including surplus funds, debts, goals, and emergency fund status,
+            then recommend the best ways to allocate their surplus funds.
+            Always prioritize high-interest debt repayment and emergency fund establishment before other goals.
+            Structure your response exactly as requested in JSON format.`
+          },
+          {
+            role: "user",
+            content: `I have $${surplus.toFixed(2)} in surplus funds this month and need advice on the best way to allocate it.
+            
+            Financial Situation:
+            - Monthly Income: $${financialSituation.totalIncome.toFixed(2)}
+            - Monthly Expenses: $${financialSituation.totalExpenses.toFixed(2)}
+            - Current Savings Rate: ${financialSituation.savingsRate.toFixed(1)}%
+            - ${emergencyFundInfo}
+            
+            Debts:
+            ${debtsInfo}
+            
+            Financial Goals:
+            ${goalsInfo}
+            
+            Investment Preference: ${investmentPreference}
+            Time Horizon: ${timeline}
+            
+            Provide recommendations in JSON format with:
+            1. An array of "recommendations" objects, each containing:
+               - "title" - short name of recommendation
+               - "description" - detailed explanation
+               - "impact" - potential financial impact
+               - "percentageAllocation" - percentage of surplus to allocate (all should add up to 100)
+               - "priority" - "high", "medium", or "low"
+               - "benefits" - array of benefits for this allocation
+               - "estimatedReturn" (optional) - expected return if applicable
+            2. A "summary" string with an overall summary of the recommendations`
+          }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.7,
+        max_tokens: 2000,
+      });
+      
+      const recommendations = JSON.parse(response.choices[0].message.content);
+      res.json(recommendations);
+    } catch (error) {
+      console.error("Error generating surplus fund recommendations:", error);
+      res.status(500).json({ error: "Failed to generate surplus fund recommendations" });
+    }
+  });
+  
   const httpServer = createServer(app);
 
   return httpServer;

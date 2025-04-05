@@ -29,6 +29,18 @@ type GoalRecommendationResponse = Array<{
     requiredActions: string[];
   }>;
 }>;
+type SurplusFundsResponse = {
+  recommendations: Array<{
+    title: string;
+    description: string;
+    impact: string;
+    percentageAllocation: number;
+    priority: 'high' | 'medium' | 'low';
+    benefits: string[];
+    estimatedReturn?: string;
+  }>;
+  summary: string;
+};
 
 /**
  * Generate financial insights by calling the backend API proxy
@@ -315,6 +327,66 @@ export async function analyzeSpendingPatterns(data: {
         yearlyIncrease: 0
       },
       monthlyInsights: []
+    };
+  }
+}
+
+/**
+ * Analyze leftover funds and recommend optimal allocation strategies
+ * This provides personalized recommendations for how to best use surplus funds
+ * based on current financial situation, goals, and debts
+ */
+export async function analyzeSurplusFunds(data: {
+  surplus: number;
+  financialSituation: {
+    totalIncome: number;
+    totalExpenses: number;
+    savingsRate: number;
+    emergencyFundStatus: {
+      currentAmount: number;
+      targetAmount: number;
+      monthsOfExpensesCovered: number;
+    };
+  };
+  debts: Array<{
+    name: string;
+    balance: number;
+    interestRate: number;
+    minimumPayment: number;
+    priority?: number;
+  }>;
+  goals: Array<{
+    id: number;
+    name: string;
+    type: string;
+    targetAmount: number;
+    currentAmount: number;
+    targetDate?: string;
+    priority?: number;
+  }>;
+  investmentPreference?: 'conservative' | 'moderate' | 'aggressive';
+  timeline?: 'short' | 'medium' | 'long';
+}): Promise<SurplusFundsResponse> {
+  try {
+    const response = await fetch('/api/openai/surplus-recommendations', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Server responded with status: ${response.status}`);
+    }
+    
+    const recommendations: SurplusFundsResponse = await response.json();
+    return recommendations;
+  } catch (error) {
+    console.error("Error analyzing surplus funds:", error);
+    return {
+      recommendations: [],
+      summary: "Unable to generate recommendations at this time. Please try again later."
     };
   }
 }

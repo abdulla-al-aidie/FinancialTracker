@@ -56,7 +56,13 @@ export interface Budget {
 // Financial Goal Types
 export enum GoalType {
   Saving = "Saving",
-  DebtPayoff = "DebtPayoff"
+  DebtPayoff = "DebtPayoff",
+  EmergencyFund = "EmergencyFund",
+  Retirement = "Retirement",
+  Education = "Education",
+  HomeDownPayment = "HomeDownPayment",
+  Travel = "Travel",
+  MajorPurchase = "MajorPurchase"
 }
 
 // Financial Goal

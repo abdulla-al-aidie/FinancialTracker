@@ -59,6 +59,7 @@ import ReportGeneratorModal from "@/components/ReportGeneratorModal";
 import AIGoalPrioritization from "@/components/AIGoalPrioritization";
 import AISpendingOptimization from "@/components/AISpendingOptimization";
 import FinancialHealthAssessment from "@/components/FinancialHealthAssessment";
+import SurplusFundsRecommendation from "@/components/SurplusFundsRecommendation";
 import ActionableRecommendations from "@/components/ActionableRecommendations";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
@@ -1029,6 +1030,9 @@ export default function Dashboard() {
             
             {/* AI Spending Optimization component */}
             <AISpendingOptimization />
+            
+            {/* Surplus Funds Recommendation component */}
+            <SurplusFundsRecommendation />
           </TabsContent>
           
           {/* Knowledge Hub Tab */}
