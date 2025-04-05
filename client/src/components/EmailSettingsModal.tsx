@@ -33,7 +33,6 @@ import { Mail } from "lucide-react";
 const emailSettingsSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   notificationsEnabled: z.boolean(),
-  budgetAlerts: z.boolean(),
   paymentReminders: z.boolean(),
   goalProgress: z.boolean(),
   monthlyReports: z.boolean(),
@@ -57,7 +56,6 @@ export default function EmailSettingsModal({ open, onClose }: EmailSettingsModal
     defaultValues: {
       email: userProfile.email || "",
       notificationsEnabled: userProfile.notificationsEnabled ?? true,
-      budgetAlerts: userProfile.emailNotifications?.budgetAlerts ?? true,
       paymentReminders: userProfile.emailNotifications?.paymentReminders ?? true,
       goalProgress: userProfile.emailNotifications?.goalProgress ?? true,
       monthlyReports: userProfile.emailNotifications?.monthlyReports ?? false,
@@ -75,7 +73,7 @@ export default function EmailSettingsModal({ open, onClose }: EmailSettingsModal
         email: values.email,
         notificationsEnabled: values.notificationsEnabled,
         emailNotifications: {
-          budgetAlerts: values.budgetAlerts,
+          ...(userProfile.emailNotifications || {}), // Preserve existing notifications
           paymentReminders: values.paymentReminders,
           goalProgress: values.goalProgress,
           monthlyReports: values.monthlyReports,
@@ -161,28 +159,6 @@ export default function EmailSettingsModal({ open, onClose }: EmailSettingsModal
 
             <div className="space-y-4">
               <h3 className="text-sm font-medium">Notification Types</h3>
-
-              <FormField
-                control={form.control}
-                name="budgetAlerts"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                    <div className="space-y-0.5">
-                      <FormLabel>Budget Alerts</FormLabel>
-                      <FormDescription>
-                        Notify when you approach or exceed budget limits
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={!form.watch("notificationsEnabled")}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
