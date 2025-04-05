@@ -20,7 +20,6 @@ const paymentFormSchema = z.object({
     .positive("Payment amount must be greater than zero")
     .min(1, "Payment amount must be at least $1"),
   date: z.date(),
-  applyToGoal: z.boolean().default(true),
 });
 
 type PaymentFormValues = z.infer<typeof paymentFormSchema>;
@@ -45,7 +44,6 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     defaultValues: {
       amount: debt.minimumPayment || 0,
       date: new Date(),
-      applyToGoal: true,
     },
   });
   
@@ -138,8 +136,8 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       associatedDebtId: debt.id
     });
     
-    // If there's a related goal and user wants to apply payment to goal
-    if (relatedGoal && values.applyToGoal) {
+    // If there's a related goal, always apply payment to the goal
+    if (relatedGoal) {
       // Initialize monthly progress if it doesn't exist
       const goalMonthlyProgress = relatedGoal.monthlyProgress || {};
       
@@ -253,30 +251,16 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
               )}
             />
             
-            {/* Apply to goal field - only show if there's a related goal */}
+            {/* Show informational message if there's a related goal */}
             {relatedGoal && (
-              <FormField
-                control={form.control}
-                name="applyToGoal"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <input
-                        type="checkbox"
-                        checked={field.value}
-                        onChange={field.onChange}
-                        className="h-4 w-4 mt-1"
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>Apply to debt payoff goal</FormLabel>
-                      <FormDescription>
-                        Update your "{relatedGoal.name}" goal progress with this payment
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
+              <div className="rounded-md border p-4 bg-blue-50">
+                <div className="space-y-1 leading-none">
+                  <p className="font-medium text-blue-800">Payment will be applied to goal</p>
+                  <p className="text-sm text-blue-700">
+                    This payment will automatically be applied to your "{relatedGoal.name}" goal progress
+                  </p>
+                </div>
+              </div>
             )}
             
             <DialogFooter>
