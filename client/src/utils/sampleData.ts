@@ -191,7 +191,7 @@ export function generateSampleGoals(): Goal[] {
   const goals: Goal[] = [
     {
       id: 1,
-      type: GoalType.Saving,
+      type: GoalType.Other,
       name: "Emergency Fund",
       targetAmount: 10000,
       currentAmount: 2500,
@@ -200,7 +200,7 @@ export function generateSampleGoals(): Goal[] {
     },
     {
       id: 2,
-      type: GoalType.Saving,
+      type: GoalType.Other,
       name: "Vacation",
       targetAmount: 3000,
       currentAmount: 1200,
@@ -218,7 +218,7 @@ export function generateSampleGoals(): Goal[] {
     },
     {
       id: 4,
-      type: GoalType.Saving,
+      type: GoalType.Other,
       name: "New Laptop",
       targetAmount: 1500,
       currentAmount: 300,

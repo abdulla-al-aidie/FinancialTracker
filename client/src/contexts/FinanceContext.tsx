@@ -28,7 +28,7 @@ const DEFAULT_USER_PROFILE: UserProfile = {
   name: "",
   email: "",
   preferredCurrency: "USD",
-  goalPreference: GoalType.Saving,
+  goalPreference: GoalType.Other,
   notificationsEnabled: true,
   emailNotifications: {
     budgetAlerts: true,

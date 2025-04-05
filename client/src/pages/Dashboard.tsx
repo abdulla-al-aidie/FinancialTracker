@@ -924,8 +924,8 @@ export default function Dashboard() {
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <Badge variant={goal.type === GoalType.Saving ? "outline" : "secondary"}>
-                                {goal.type === GoalType.Saving ? 'Saving' : 'Debt Payoff'} Goal
+                              <Badge variant={goal.type === GoalType.Other ? "outline" : "secondary"}>
+                                {goal.type === GoalType.Other ? 'Other' : 'Debt Payoff'} Goal
                               </Badge>
                               <h3 className="text-lg font-medium mt-1">{goal.name}</h3>
                               <p className="text-sm text-gray-500">{goal.description}</p>
