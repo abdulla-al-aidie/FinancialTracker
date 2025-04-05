@@ -65,6 +65,7 @@ import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
 import GoalContributionModal from "@/components/GoalContributionModal";
+import UpdateFutureMonthsButton from "@/components/UpdateFutureMonthsButton";
 
 
 export default function Dashboard() {
@@ -388,6 +389,19 @@ export default function Dashboard() {
             
             {/* Month Selector */}
             <MonthSelector />
+            
+            {/* Sequential Month Propagation */}
+            <div className="mt-2 mb-6">
+              <Card>
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-medium mb-2">Month-to-Month Data Propagation</h3>
+                  <p className="text-sm text-gray-500 mb-3">
+                    Propagate debt and goal data sequentially through all months (Jan→Feb→Mar→...→Dec→Jan).
+                  </p>
+                  <UpdateFutureMonthsButton />
+                </CardContent>
+              </Card>
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Expense Breakdown Chart */}
