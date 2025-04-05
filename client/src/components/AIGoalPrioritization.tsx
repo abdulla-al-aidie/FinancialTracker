@@ -92,12 +92,12 @@ export default function AIGoalPrioritization() {
   };
 
   // Empty functions to return null instead of badges
-  const renderPriorityBadge = () => {
+  const renderPriorityBadge = (_priority?: number) => {
     return null;
   };
 
   // Function to render goal type badge (returns null)
-  const renderGoalTypeBadge = () => {
+  const renderGoalTypeBadge = (_type?: GoalType) => {
     return null;
   };
 

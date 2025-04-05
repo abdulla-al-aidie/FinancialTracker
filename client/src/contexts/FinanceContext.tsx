@@ -1829,8 +1829,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           newSavingsRate: 0,
           monthlyIncrease: 0,
           yearlyIncrease: 0
-        },
-        monthlyInsights: []
+        }
       };
     }
 
@@ -1920,8 +1919,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           newSavingsRate: 0,
           monthlyIncrease: 0,
           yearlyIncrease: 0
-        },
-        monthlyInsights: []
+        }
       };
     }
   };
@@ -1998,23 +1996,44 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const isComplete = totalProgress >= sourceGoal.targetAmount;
       
       if (existingGoal) {
-        // Keep the target month's own progress but update the cumulative amount
+        // If the goal exists in the target month, preserve its own monthly progress
+        // but update the other properties from the source month
+        const existingMonthlyProgress = existingGoal.monthlyProgress || {};
+        
+        // Combine the monthly progress, prioritizing the target month's existing progress values
+        const combinedMonthlyProgress = {
+          ...sourceGoal.monthlyProgress || {}, // First bring in source data
+          ...existingMonthlyProgress           // But preserve target month's own progress (if any)
+        };
+        
+        // Recalculate total progress including any progress in the target month
+        let updatedTotalProgress = totalProgress;
+        if (existingMonthlyProgress[targetMonthId]) {
+          // If there's already progress in the target month, add it 
+          // (replacing whatever might have been in the source data)
+          updatedTotalProgress = totalProgress + existingMonthlyProgress[targetMonthId] - 
+            (sourceGoal.monthlyProgress && sourceGoal.monthlyProgress[targetMonthId] || 0);
+        }
+        
+        // Cap at target amount if completed
+        updatedTotalProgress = Math.min(updatedTotalProgress, sourceGoal.targetAmount);
+        
+        // Check if goal is now complete with the updated progress
+        const updatedIsComplete = updatedTotalProgress >= sourceGoal.targetAmount;
+        
         return {
           ...sourceGoal,
-          targetAmount: sourceGoal.targetAmount,   // Keep target amount from source
-          targetDate: sourceGoal.targetDate,       // Keep target date from source
-          description: sourceGoal.description,     // Keep description from source
-          type: sourceGoal.type,                   // Keep goal type from source
-          priority: sourceGoal.priority,           // Keep priority from source
-          currentAmount: isComplete ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
-          isComplete: isComplete,                  // Mark as complete if target reached
-          monthlyProgress: {
-            ...sourceGoal.monthlyProgress,         // Bring source monthly progress
-            ...existingGoal.monthlyProgress        // But preserve target month's own progress (if any)
-          }
+          targetAmount: sourceGoal.targetAmount,    // Keep target amount from source
+          targetDate: sourceGoal.targetDate,        // Keep target date from source
+          description: sourceGoal.description,      // Keep description from source
+          type: sourceGoal.type,                    // Keep goal type from source
+          priority: sourceGoal.priority,            // Keep priority from source
+          currentAmount: updatedTotalProgress,      // Update with recalculated progress
+          isComplete: updatedIsComplete,            // Update completion status
+          monthlyProgress: combinedMonthlyProgress  // Use combined monthly progress data
         };
       } else {
-        // Goal doesn't exist in target month, create it with proper progress
+        // Goal doesn't exist in target month, create it with cumulative progress up to source month
         return {
           ...sourceGoal,
           currentAmount: isComplete ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
@@ -2076,12 +2095,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         latestBalance = 0;
       }
       
-      // Record this calculated balance in the target month's balance record
+      // Start with source monthly balances for history
       const updatedMonthlyBalances = {
         ...sourceMonthlyBalances
       };
       
-      // If the debt is not fully paid off, set the balance for the target month
+      // If the debt is not fully paid off, set the initial balance for the target month
       if (latestBalance > 0) {
         updatedMonthlyBalances[targetMonthId] = latestBalance;
       }
@@ -2090,43 +2109,59 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const isFullyPaid = latestBalance <= 0;
       
       if (existingDebt) {
-        // Update existing debt with latest information from source month
+        // If debt exists in target month, preserve the existing payment and balance data for target month
+        const existingMonthlyPayments = existingDebt.monthlyPayments || {};
+        const existingMonthlyBalances = existingDebt.monthlyBalances || {};
+        
+        // Combine the monthly payments, prioritizing target month's existing values
+        const combinedMonthlyPayments = {
+          ...sourceMonthlyPayments,        // First bring source payments
+          ...existingMonthlyPayments       // But preserve target month's own payments
+        };
+        
+        // Combine the monthly balances, prioritizing target month's existing values
+        // except make sure to bring forward the latest pre-payment balance as a starting point
+        const combinedMonthlyBalances = {
+          ...updatedMonthlyBalances,       // Use the calculated balances (including source month history)
+          ...existingMonthlyBalances       // But preserve target month's balance record if it exists
+        };
+        
+        // Recalculate the total payments including any in the target month
+        let updatedTotalPayments = totalPayments;
+        if (existingMonthlyPayments[targetMonthId]) {
+          // If there are already payments in the target month, add them 
+          updatedTotalPayments += existingMonthlyPayments[targetMonthId];
+        }
+        
+        // Calculate if debt is now fully paid with target month payments included
+        const targetMonthBalance = existingMonthlyBalances[targetMonthId];
+        const updatedIsFullyPaid = targetMonthBalance !== undefined ? 
+          targetMonthBalance <= 0 : isFullyPaid;
+        
         return {
-          ...existingDebt,                      // Start with existing debt properties 
-          name: sourceDebt.name,                // Basic info from source
+          ...sourceDebt,                      // Start with source debt
+          name: sourceDebt.name,              // Ensure name from source
           originalPrincipal: sourceDebt.originalPrincipal,
           dueDate: sourceDebt.dueDate,
           interestRate: sourceDebt.interestRate,
           minimumPayment: sourceDebt.minimumPayment,
           priority: sourceDebt.priority,
-          // Important: The main balance field is no longer used for calculations
-          // It serves as a fallback for months with no specific balance
-          balance: isFullyPaid ? 0 : sourceDebt.balance,
-          // Preserve any payments made in the target month
-          monthlyPayments: {
-            ...sourceMonthlyPayments,
-            ...(existingDebt.monthlyPayments || {})
-          },
-          // Set the calculated balance for this month
-          monthlyBalances: {
-            ...updatedMonthlyBalances,
-            ...(existingDebt.monthlyBalances || {})
-          },
-          // Update the totalPaid property based on all payments
-          totalPaid: totalPayments + (
-            existingDebt.monthlyPayments && existingDebt.monthlyPayments[targetMonthId] 
-              ? existingDebt.monthlyPayments[targetMonthId] 
-              : 0
-          ),
-          // Mark debt as paid off if balance is zero or negative
-          isPaidOff: isFullyPaid
+          // For the main balance field, use the fully paid status or existing value
+          balance: updatedIsFullyPaid ? 0 : (targetMonthBalance || latestBalance),
+          // Use the combined payment and balance records
+          monthlyPayments: combinedMonthlyPayments,
+          monthlyBalances: combinedMonthlyBalances,
+          // Update total paid with all payments including target month
+          totalPaid: updatedTotalPayments,
+          // Update paid off status
+          isPaidOff: updatedIsFullyPaid
         };
       } else {
-        // Create new debt with the latest balance
+        // Debt doesn't exist in target month, create it with the source debt's data
         return {
           ...sourceDebt,
-          // The main balance is set to 0 if paid off
-          balance: isFullyPaid ? 0 : sourceDebt.balance,
+          // The main balance is set to 0 if fully paid, otherwise use source balance
+          balance: isFullyPaid ? 0 : latestBalance,
           // Copy payment history
           monthlyPayments: { ...sourceMonthlyPayments },
           // Set balance for this new month

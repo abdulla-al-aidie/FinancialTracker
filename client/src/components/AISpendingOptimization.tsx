@@ -21,6 +21,7 @@ export default function AISpendingOptimization() {
   const { analyzeSpendingForGoals, months } = useFinance();
   
   const [isAnalyzingSpending, setIsAnalyzingSpending] = useState(false);
+  // The state must match what's returned by analyzeSpendingForGoals
   const [optimizationData, setOptimizationData] = useState<{
     optimizationAreas: Array<{
       category: string;
@@ -34,7 +35,8 @@ export default function AISpendingOptimization() {
       monthlyIncrease: number;
       yearlyIncrease: number;
     };
-    monthlyInsights: Array<{
+    // Optional monthlyInsights array for tracking insights between months
+    monthlyInsights?: Array<{
       type: string;
       description: string;
       comparison: string;
