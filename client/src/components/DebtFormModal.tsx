@@ -102,16 +102,22 @@ export default function DebtFormModal({ open, onClose, debt }: DebtFormModalProp
   }, [form, debt, open]);
   
   function onSubmit(values: DebtFormValues) {
+    // Make sure balance is set to be originalPrincipal - totalPaid
+    const totalPaid = isEditMode && debt ? debt.totalPaid || 0 : 0;
+    const calculatedBalance = Math.max(0, values.originalPrincipal - totalPaid);
+    
     // Create debt data with required fields
     const debtData = {
       name: values.name,
-      balance: values.balance,
+      // Always set balance to be originalPrincipal - totalPaid for consistency
+      balance: calculatedBalance,
       interestRate: values.interestRate,
       minimumPayment: values.minimumPayment,
       dueDate: format(values.dueDate, "yyyy-MM-dd"),
       priority: priority,
       originalPrincipal: values.originalPrincipal,
-      totalPaid: isEditMode && debt ? debt.totalPaid : 0,
+      totalPaid: totalPaid,
+      isPaidOff: calculatedBalance <= 0,
       monthlyPayments: isEditMode && debt ? debt.monthlyPayments : {},
       monthlyBalances: isEditMode && debt ? debt.monthlyBalances : {},
     };

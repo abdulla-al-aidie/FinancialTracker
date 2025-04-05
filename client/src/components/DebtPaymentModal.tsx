@@ -109,10 +109,16 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       [paymentMonthId]: newMonthBalance
     };
     
-    // Update the debt with ONLY the month-specific changes
-    // No longer modifying the main balance field directly
+    // Update the debt with the new balance and monthly tracking data
     const updatedDebt = {
       ...debt,
+      // Always update the main balance field for proper display
+      balance: newMonthBalance,
+      // Also update the total paid amount
+      totalPaid: totalPaid,
+      // Mark as paid off if completely paid
+      isPaidOff: newMonthBalance <= 0,
+      // Track payments and balances by month
       monthlyPayments: updatedMonthlyPayments,
       monthlyBalances: updatedMonthlyBalances
     };
