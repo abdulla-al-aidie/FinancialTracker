@@ -19,7 +19,8 @@ export default function MonthSelector() {
     activeMonth, 
     setActiveMonth, 
     addMonth,
-    compareWithPreviousMonth
+    compareWithPreviousMonth,
+    updateFutureMonths
   } = useFinance();
   
   // Get the current active month/year
@@ -79,6 +80,14 @@ export default function MonthSelector() {
     
     // Set the active month (this will cause all data to be month-specific)
     setActiveMonth(monthId);
+    
+    // Automatically propagate data through all months sequentially
+    // This ensures debt balances and goal progress flow correctly
+    if (months.length > 1) {
+      setTimeout(() => {
+        updateFutureMonths();
+      }, 100);
+    }
   };
   
   // Get comparison with previous month
