@@ -1298,30 +1298,31 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Update the totalPaid field for tracking
     debt.totalPaid = totalPaid;
     
-    // Don't update the main balance field directly anymore
-    // Leave it as the original remaining balance when the debt was first created
-    // This will be used as a fallback for months with no specific balance
+    // Calculate current balance based on total payments
+    const currentBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
-    // Only update the current month's debt in the monthly records
-    const updatedDebts = debts.map(d => {
-      if (d.id === debt.id) {
-        return {
-          ...existingDebt,               // Start with existing debt data
-          name: debt.name,               // Update basic information
-          originalPrincipal: debt.originalPrincipal,
-          interestRate: debt.interestRate,
-          minimumPayment: debt.minimumPayment,
-          dueDate: debt.dueDate,
-          priority: debt.priority,       // Keep priority setting
-          totalPaid: totalPaid,          // Update with calculated total
-          monthlyPayments: debt.monthlyPayments,  // Update payment records
-          monthlyBalances: debt.monthlyBalances   // Update balance records
-        };
-      }
-      return d;
-    });
+    // Update the debt with the most current data
+    const updatedDebt = {
+      ...existingDebt,               // Start with existing debt data
+      name: debt.name,               // Update basic information
+      originalPrincipal: debt.originalPrincipal,
+      interestRate: debt.interestRate,
+      minimumPayment: debt.minimumPayment,
+      dueDate: debt.dueDate,
+      priority: debt.priority,       // Keep priority setting
+      balance: currentBalance,       // Update current balance
+      totalPaid: totalPaid,          // Update with calculated total
+      monthlyPayments: debt.monthlyPayments,  // Update payment records
+      monthlyBalances: debt.monthlyBalances,  // Update balance records
+      isPaidOff: currentBalance <= 0 // Update paid off status
+    };
     
-    // Update the allDebts state with updated debts for the current month only
+    // Update the current month's debt in the monthly records
+    const updatedDebts = debts.map(d => 
+      d.id === debt.id ? updatedDebt : d
+    );
+    
+    // Update the allDebts state with updated debts for the current month
     setAllDebts(prev => ({
       ...prev,
       [activeMonth]: updatedDebts
@@ -1329,16 +1330,28 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     
     // Save to localStorage (both month-specific and for backward compatibility)
     saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
+    saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
     
-    // For backward compatibility, but don't override the month structure
-    saveToLocalStorage("debts", updatedDebts);
-    
-    // Automatically propagate changes to the next month if it exists
+    // First force a full propagation to all future months immediately - this ensures that
+    // all months after the current one are updated with the new payment data
     propagateChangesToNextMonth();
+    
+    // If we're editing a debt from a non-current month (historical), 
+    // we need to make sure that the active month also gets updated
+    const sortedMonths = [...months.map(m => m.id)].sort();
+    const editedMonthIndex = sortedMonths.indexOf(activeMonth);
+    const currentMonthId = getCurrentMonthId();
+    const currentMonthIndex = sortedMonths.indexOf(currentMonthId);
+    
+    // If we're editing a past month but viewing a future month, update the view
+    if (editedMonthIndex < currentMonthIndex && allDebts[currentMonthId]) {
+      // Force a refresh of the data to reflect changes across all months
+      calculateSummaryData();
+    }
     
     toast({
       title: "Debt Updated",
-      description: `Your debt "${debt.name}" has been updated`,
+      description: `Your debt "${debt.name}" has been updated and all future months have been updated`,
       variant: "default"
     });
   };

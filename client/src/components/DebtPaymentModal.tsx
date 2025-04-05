@@ -56,7 +56,7 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Initialize monthlyPayments if it doesn't exist
     const currentMonthlyPayments = debt.monthlyPayments || {};
     
-    // Add payment to the monthly payment record
+    // IMPORTANT: Add payment to the monthly payment record
     const updatedMonthlyPayments = {
       ...currentMonthlyPayments,
       [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + paymentAmount
@@ -65,45 +65,17 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Initialize monthly balances if it doesn't exist
     const currentMonthlyBalances = debt.monthlyBalances || {};
     
-    // Get the current month's starting balance or calculate from original principal and payments
-    // For the selected payment month
-    let startingBalanceForMonth = debt.originalPrincipal;
-    
-    // Look for the previous month's balance as starting point
-    const monthParts = paymentMonthId.split('-');
-    let prevYear = parseInt(monthParts[0]);
-    let prevMonth = parseInt(monthParts[1]) - 1;
-    
-    if (prevMonth === 0) {
-      prevMonth = 12;
-      prevYear -= 1;
-    }
-    
-    const prevMonthId = `${prevYear}-${prevMonth.toString().padStart(2, '0')}`;
-    
-    // If we have a balance for the previous month, use that as our starting point
-    if (currentMonthlyBalances[prevMonthId] !== undefined) {
-      startingBalanceForMonth = currentMonthlyBalances[prevMonthId];
-    }
-    
-    // Calculate new month-specific balance
-    // For the current month's balance, we should use originalPrincipal minus all payments
-    // Sum all payments made to get total paid (including this new payment)
-    const allPaymentsWithCurrent = {...currentMonthlyPayments};
-    // Add the current payment to the month
-    allPaymentsWithCurrent[paymentMonthId] = (allPaymentsWithCurrent[paymentMonthId] || 0) + paymentAmount;
-    
-    // Calculate total paid across ALL months
-    // This is critical to get accurate payment totals
+    // Calculate total paid across ALL months including the new payment
     let totalPaid = 0;
-    Object.entries(allPaymentsWithCurrent).forEach(([_, amount]) => {
+    Object.entries(updatedMonthlyPayments).forEach(([_, amount]) => {
       totalPaid += amount as number; 
     });
     
-    // New balance = original principal minus total paid
+    // Calculate current balance based on total payments
     const newMonthBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
-    // Update the monthly balances record for the current month
+    // Update all monthly balances for the current and future months
+    // This ensures the balance is updated consistently
     const updatedMonthlyBalances = {
       ...currentMonthlyBalances,
       // Set the current month's balance
@@ -124,10 +96,8 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       monthlyBalances: updatedMonthlyBalances
     };
     
-    // Update the debt
-    updateDebt(updatedDebt);
-    
-    // Create an expense entry for the payment with associatedDebtId
+    // First create an expense entry for the payment with associatedDebtId
+    // Do this before updating the debt to avoid circular updates
     addExpense({
       amount: paymentAmount,
       date: paymentDate,
@@ -147,13 +117,22 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
         [paymentMonthId]: (goalMonthlyProgress[paymentMonthId] || 0) + paymentAmount
       };
       
-      // Update the goal with ONLY the month-specific changes
-      // No longer updating the currentAmount field directly
+      // Recalculate total goal progress (sum of all monthly progress)
+      const newCurrentAmount = Object.values(updatedGoalMonthlyProgress).reduce(
+        (sum, amount) => sum + (amount as number), 0
+      );
+      
+      // Update goal with new monthly progress and recalculated current amount
       updateGoal({
         ...relatedGoal,
-        monthlyProgress: updatedGoalMonthlyProgress
+        currentAmount: newCurrentAmount,
+        monthlyProgress: updatedGoalMonthlyProgress,
+        completed: newCurrentAmount >= relatedGoal.targetAmount
       });
     }
+    
+    // After handling related goal updates, update the debt (which triggers propagation)
+    updateDebt(updatedDebt);
     
     onClose();
     form.reset();
