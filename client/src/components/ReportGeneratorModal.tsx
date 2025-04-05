@@ -622,7 +622,7 @@ export default function ReportGeneratorModal({ open, onClose }: ReportGeneratorM
       doc.setFontSize(10);
       doc.setTextColor(100, 100, 100);
       doc.text(`Page ${i} of ${pageCount}`, 105, 285, { align: "center" });
-      doc.text("Finance Tracker App - Confidential Financial Report", 105, 280, { align: "center" });
+      doc.text("Minty Finance Tracker - Confidential Financial Report", 105, 280, { align: "center" });
     }
     
     // Save the PDF

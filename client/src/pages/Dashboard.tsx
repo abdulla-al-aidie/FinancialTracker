@@ -240,7 +240,7 @@ export default function Dashboard() {
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center">
               <ChartIcon className="text-primary h-6 w-6 mr-2" />
-              <h1 className="text-xl font-bold text-gray-800">Finance Tracker</h1>
+              <h1 className="text-xl font-bold text-gray-800">Minty Finance Tracker</h1>
             </div>
             <div>
               <span className="text-sm text-gray-500">Your Financial Assistant</span>
