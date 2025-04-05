@@ -11,11 +11,10 @@ export enum ExpenseCategory {
   ChildcareOrTuition = "Childcare or Tuition",
   MedicalAndHealth = "Medical and Health Expenses",
   PersonalCareAndClothing = "Personal Care and Clothing",
-  SavingsAndInvestments = "Savings and Investments",
+  Investments = "Investments",
   EntertainmentAndDining = "Entertainment and Dining Out",
   PetExpenses = "Pet Expenses",
-  Miscellaneous = "Miscellaneous or Emergency Fund",
-  Savings = "Savings"
+  Miscellaneous = "Miscellaneous or Emergency Fund"
 }
 
 // Income Types

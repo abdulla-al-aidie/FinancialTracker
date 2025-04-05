@@ -678,12 +678,12 @@ export default function Dashboard() {
                         <Input placeholder="Search savings contributions..." />
                       </div>
                       
-                      {/* Filter expenses to find ones with category of "Savings" */}
-                      {expenses.filter(expense => expense.category === ExpenseCategory.Savings).length > 0 ? (
+                      {/* Filter expenses to find ones tagged as goal contributions */}
+                      {expenses.filter(expense => expense.description?.includes("Contribution to")).length > 0 ? (
                         <div className="space-y-4 mt-4">
                           {/* Show savings contributions sorted by date */}
                           {expenses
-                            .filter(expense => expense.category === ExpenseCategory.Savings)
+                            .filter(expense => expense.description?.includes("Contribution to"))
                             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                             .map((expense) => (
                               <div 

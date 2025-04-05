@@ -84,7 +84,7 @@ export default function BudgetTemplate() {
       [ExpenseCategory.ChildcareOrTuition]: "#ec4899", // Pink
       [ExpenseCategory.MedicalAndHealth]: "#14b8a6", // Teal
       [ExpenseCategory.PersonalCareAndClothing]: "#a855f7", // Purple
-      [ExpenseCategory.SavingsAndInvestments]: "#22c55e", // Green
+      [ExpenseCategory.Investments]: "#22c55e", // Green
       [ExpenseCategory.EntertainmentAndDining]: "#f43f5e", // Rose
       [ExpenseCategory.PetExpenses]: "#84cc16", // Lime
       [ExpenseCategory.Miscellaneous]: "#78716c", // Stone

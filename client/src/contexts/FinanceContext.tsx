@@ -811,8 +811,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     if (description.includes("clothing") || description.includes("haircut") || description.includes("salon") || description.includes("personal care"))
       return ExpenseCategory.PersonalCareAndClothing;
       
-    if (description.includes("savings") || description.includes("investment") || description.includes("stock") || description.includes("retirement"))
-      return ExpenseCategory.SavingsAndInvestments;
+    if (description.includes("investment") || description.includes("stock") || description.includes("retirement") || description.includes("mutual fund") || description.includes("etf"))
+      return ExpenseCategory.Investments;
       
     if (description.includes("restaurant") || description.includes("dining") || description.includes("movie") || description.includes("entertainment") || description.includes("concert"))
       return ExpenseCategory.EntertainmentAndDining;
@@ -1154,7 +1154,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       id: Date.now(),
       amount: contribution.amount,
       date: contribution.date,
-      category: ExpenseCategory.Savings,
+      category: ExpenseCategory.Miscellaneous,
       description: `Contribution to ${goalToUpdate.name}${contribution.notes ? `: ${contribution.notes}` : ''}`,
     };
     
