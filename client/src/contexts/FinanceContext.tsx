@@ -1459,6 +1459,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       
       if (mostRecentMonth) {
         // Use propagateMonthData to copy all relevant data from the previous month
+        // This ensures we're always using the most recent month's data
         propagateMonthData(mostRecentMonth, monthId);
         
         // Also copy budgets but reset spent amount, since propagateMonthData doesn't handle budgets
@@ -1941,9 +1942,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // For each future month, update it based on the active month
+    // Use the active month as the initial source
+    let sourceMonth = activeMonth;
+    
+    // For each future month, update it based on the MOST RECENT previous month
+    // This ensures changes propagate sequentially through all future months
     for (const monthId of futureMonths) {
-      propagateMonthData(activeMonth, monthId);
+      propagateMonthData(sourceMonth, monthId);
+      // After updating, this month becomes the new source for the next iteration
+      sourceMonth = monthId;
     }
     
     toast({
