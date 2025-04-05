@@ -389,19 +389,6 @@ export default function Dashboard() {
             {/* Month Selector */}
             <MonthSelector />
             
-            {/* Sequential Month Propagation */}
-            <div className="mt-2 mb-6">
-              <Card>
-                <CardContent className="p-4">
-                  <h3 className="text-lg font-medium mb-2">Month-to-Month Data Propagation</h3>
-                  <p className="text-sm text-gray-500 mb-3">
-                    Propagate debt and goal data sequentially through all months (Jan→Feb→Mar→...→Dec→Jan).
-                  </p>
-                  <UpdateFutureMonthsButton />
-                </CardContent>
-              </Card>
-            </div>
-            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {/* Expense Breakdown Chart */}
               <Card className="col-span-1">
@@ -1164,6 +1151,16 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-500 mt-1">
                       Download a comprehensive report of your income, expenses, and savings for the current month
                     </p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Data Management</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <UpdateFutureMonthsButton />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Update debt and goal data sequentially through all months (Jan→Feb→Mar→...→Dec→Jan)
+                      </p>
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
