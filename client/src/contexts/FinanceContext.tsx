@@ -1944,35 +1944,63 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Function to propagate data to the immediate next month only
+  // Function to propagate data to all months in sequence for the entire year cycle
   const updateFutureMonths = async () => {
-    // Find all months after active month
+    // Get all months sorted chronologically
     const sortedMonths = [...months.map(m => m.id)].sort();
-    const activeMonthIndex = sortedMonths.indexOf(activeMonth);
     
-    // Check if there are future months
-    if (activeMonthIndex < 0 || activeMonthIndex >= sortedMonths.length - 1) {
+    if (sortedMonths.length <= 1) {
       toast({
-        title: "No Future Months",
-        description: "There are no future months to update. Add a new month first.",
+        title: "Not Enough Months",
+        description: "You need at least two months to propagate data. Add more months first.",
         variant: "default"
       });
       return;
     }
     
-    // Propagate data sequentially through all future months
-    // Start with the current month and update each subsequent month in order
-    for (let i = activeMonthIndex; i < sortedMonths.length - 1; i++) {
-      const currentMonth = sortedMonths[i];
-      const nextMonth = sortedMonths[i + 1];
-      
-      // Propagate data from current month to next month
-      propagateMonthData(currentMonth, nextMonth);
+    // Extract month parts to organize by month number regardless of year
+    const monthsByMonthNumber = sortedMonths.map(monthId => {
+      const [year, month] = monthId.split('-');
+      return { 
+        monthId,
+        year: parseInt(year),
+        month: parseInt(month)
+      };
+    }).sort((a, b) => a.month - b.month); // Sort by month number (January first, December last)
+    
+    // Propagate goals and debts in month-to-month sequence through the entire year
+    toast({
+      title: "Updating All Months",
+      description: "Propagating debt and goal data through all months sequentially...",
+      variant: "default"
+    });
+    
+    // First, identify all the month pairs for propagation
+    const monthPairs = [];
+    
+    // Handle all the standard month-to-month propagations (Jan→Feb, Feb→Mar, etc.)
+    for (let i = 0; i < monthsByMonthNumber.length - 1; i++) {
+      const current = monthsByMonthNumber[i];
+      const next = monthsByMonthNumber[i + 1];
+      monthPairs.push({ source: current.monthId, target: next.monthId });
+    }
+    
+    // Handle December to January transition (if they exist)
+    const december = monthsByMonthNumber.find(m => m.month === 12);
+    const january = monthsByMonthNumber.find(m => m.month === 1);
+    
+    if (december && january) {
+      monthPairs.push({ source: december.monthId, target: january.monthId });
+    }
+    
+    // Now propagate data for each pair in sequence
+    for (let pair of monthPairs) {
+      propagateMonthData(pair.source, pair.target);
     }
     
     toast({
-      title: "All Future Months Updated",
-      description: "All future months have been updated sequentially (January → February → March → etc.)",
+      title: "All Months Updated",
+      description: "Debt and goal data has been propagated through all months in sequence, including from December to January.",
       variant: "default"
     });
   };
