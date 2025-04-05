@@ -129,8 +129,8 @@ export default function ExpenseFormModal({ open, onClose, expense }: ExpenseForm
           [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + values.amount
         };
         
-        // Get the current month's starting balance or use the overall balance as fallback
-        let startingBalanceForMonth = debtToUpdate.balance;
+        // Get the current month's starting balance or calculate from original principal and payments
+        let startingBalanceForMonth = debtToUpdate.originalPrincipal;
         
         // Look for the previous month's balance as starting point
         const monthParts = paymentMonthId.split('-');

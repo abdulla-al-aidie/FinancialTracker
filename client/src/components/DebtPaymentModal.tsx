@@ -67,9 +67,9 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Initialize monthly balances if it doesn't exist
     const currentMonthlyBalances = debt.monthlyBalances || {};
     
-    // Get the current month's starting balance or use the overall balance as fallback
+    // Get the current month's starting balance or calculate from original principal and payments
     // For the selected payment month
-    let startingBalanceForMonth = debt.balance;
+    let startingBalanceForMonth = debt.originalPrincipal;
     
     // Look for the previous month's balance as starting point
     const monthParts = paymentMonthId.split('-');
@@ -89,9 +89,19 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     }
     
     // Calculate new month-specific balance
-    // Starting balance minus the current month's payments (including this one)
-    const newMonthBalance = Math.max(0, startingBalanceForMonth - 
-      (currentMonthlyPayments[paymentMonthId] || 0) - paymentAmount);
+    // For the current month's balance, we should use originalPrincipal minus all payments
+    // Sum all payments made to get total paid (including this new payment)
+    const allPaymentsWithCurrent = {...currentMonthlyPayments};
+    // Add the current payment to the month
+    allPaymentsWithCurrent[paymentMonthId] = (allPaymentsWithCurrent[paymentMonthId] || 0) + paymentAmount;
+    
+    // Calculate total paid across all months
+    const totalPaid = Object.values(allPaymentsWithCurrent).reduce(
+      (sum, amount) => sum + amount, 0
+    );
+    
+    // New balance = original principal minus total paid
+    const newMonthBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
     // Update the monthly balances record
     const updatedMonthlyBalances = {
