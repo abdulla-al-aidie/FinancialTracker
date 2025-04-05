@@ -1983,12 +1983,11 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // Calculate cumulative progress for this goal up to source month (inclusive)
       let totalProgress = 0;
       
-      // Sum up progress from all relevant months
+      // Sum up progress from ALL months, not just relevant ones
+      // This ensures all progress is carried forward correctly
       if (sourceGoal.monthlyProgress) {
-        relevantMonthIds.forEach(monthId => {
-          if (sourceGoal.monthlyProgress && sourceGoal.monthlyProgress[monthId]) {
-            totalProgress += sourceGoal.monthlyProgress[monthId];
-          }
+        Object.keys(sourceGoal.monthlyProgress).forEach(monthId => {
+          totalProgress += sourceGoal.monthlyProgress[monthId] || 0;
         });
       }
       
@@ -2070,13 +2069,12 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       // Start with the original principal (or balance as fallback)
       const originalAmount = sourceDebt.originalPrincipal || sourceDebt.balance;
       
-      // Calculate total payments up to source month
+      // Calculate total payments across ALL months, not just up to source month
+      // This ensures total payments are always calculated correctly
       let totalPayments = 0;
-      for (const monthId of relevantMonthIds) {
-        if (sourceMonthlyPayments[monthId]) {
-          totalPayments += sourceMonthlyPayments[monthId];
-        }
-      }
+      Object.keys(sourceMonthlyPayments).forEach(monthId => {
+        totalPayments += sourceMonthlyPayments[monthId] || 0;
+      });
       
       // Get the most recent balance from the source month
       let latestBalance;
