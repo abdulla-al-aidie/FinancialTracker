@@ -63,6 +63,7 @@ import ActionableRecommendations from "@/components/ActionableRecommendations";
 import MonthSelector from "@/components/MonthSelector";
 import EmailSettingsModal from "@/components/EmailSettingsModal";
 import AlertPreferencesModal from "@/components/AlertPreferencesModal";
+import GoalContributionModal from "@/components/GoalContributionModal";
 
 
 export default function Dashboard() {
@@ -98,6 +99,7 @@ export default function Dashboard() {
   const [generateReportModalOpen, setGenerateReportModalOpen] = useState(false);
   const [emailSettingsModalOpen, setEmailSettingsModalOpen] = useState(false);
   const [alertPreferencesModalOpen, setAlertPreferencesModalOpen] = useState(false);
+  const [goalContributionModalOpen, setGoalContributionModalOpen] = useState(false);
   
   // State for selected items for editing
   const [selectedGoal, setSelectedGoal] = useState<Goal | undefined>(undefined);
@@ -496,9 +498,10 @@ export default function Dashboard() {
                 <CardContent className="space-y-6">
                   {/* Transaction Type Tabs */}
                   <Tabs defaultValue="expense" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                       <TabsTrigger value="expense">Expense</TabsTrigger>
                       <TabsTrigger value="income">Income</TabsTrigger>
+                      <TabsTrigger value="savings">Savings</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="expense" className="space-y-4 pt-4">
@@ -540,6 +543,25 @@ export default function Dashboard() {
                         </Button>
                       </div>
                     </TabsContent>
+                    
+                    <TabsContent value="savings" className="space-y-4 pt-4">
+                      <div className="py-4 text-center">
+                        <div className="mb-4">
+                          <PiggyBank className="h-12 w-12 mx-auto text-blue-500" />
+                          <h3 className="mt-2 text-lg font-medium">Allocate to Savings</h3>
+                          <p className="text-sm text-gray-500">Contribute to your savings goals</p>
+                        </div>
+                        <Button 
+                          className="w-full bg-blue-600" 
+                          size="lg"
+                          onClick={() => {
+                            setGoalContributionModalOpen(true);
+                          }}
+                        >
+                          Add Goal Contribution
+                        </Button>
+                      </div>
+                    </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
@@ -552,9 +574,10 @@ export default function Dashboard() {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="income" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 mb-4">
+                    <TabsList className="grid w-full grid-cols-3 mb-4">
                       <TabsTrigger value="income">Income</TabsTrigger>
                       <TabsTrigger value="expenses">Expenses</TabsTrigger>
+                      <TabsTrigger value="savings">Savings</TabsTrigger>
                     </TabsList>
                     
                     {/* Income Tab */}
@@ -631,6 +654,55 @@ export default function Dashboard() {
                           <ShoppingBag className="mx-auto h-10 w-10 text-gray-400" />
                           <h3 className="mt-2 text-sm font-medium text-gray-900">No expense entries</h3>
                           <p className="mt-1 text-sm text-gray-500">Add expenses to see them here.</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    {/* Savings Tab */}
+                    <TabsContent value="savings">
+                      <div className="flex flex-col gap-4">
+                        <Input placeholder="Search savings contributions..." />
+                      </div>
+                      
+                      {/* Filter expenses to find ones with category of "Savings" */}
+                      {expenses.filter(expense => expense.category === "Savings").length > 0 ? (
+                        <div className="space-y-4 mt-4">
+                          {/* Show savings contributions sorted by date */}
+                          {expenses
+                            .filter(expense => expense.category === "Savings")
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((expense) => (
+                              <div 
+                                key={expense.id} 
+                                className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-md cursor-pointer"
+                                onClick={() => handleExpenseClick(expense)}
+                              >
+                                <div className="flex items-center space-x-3">
+                                  <div className="p-2 rounded-full bg-blue-100">
+                                    <PiggyBank className="h-4 w-4 text-blue-500" />
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium">{expense.description}</p>
+                                    <p className="text-xs text-gray-500">Goal Contribution • {new Date(expense.date).toLocaleDateString()}</p>
+                                  </div>
+                                </div>
+                                <p className="text-sm font-semibold text-blue-600">{formatCurrency(expense.amount)}</p>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-10">
+                          <PiggyBank className="mx-auto h-10 w-10 text-gray-400" />
+                          <h3 className="mt-2 text-sm font-medium text-gray-900">No savings contributions</h3>
+                          <p className="mt-1 text-sm text-gray-500">Contribute to your goals to see entries here.</p>
+                          <div className="mt-4">
+                            <Button 
+                              className="mx-auto" 
+                              onClick={() => setGoalContributionModalOpen(true)}
+                            >
+                              Add Goal Contribution
+                            </Button>
+                          </div>
                         </div>
                       )}
                     </TabsContent>
@@ -1160,6 +1232,14 @@ export default function Dashboard() {
           debt={selectedDebt}
         />
       )}
+      
+      {/* Goal Contribution Modal */}
+      <GoalContributionModal
+        open={goalContributionModalOpen}
+        onClose={() => {
+          setGoalContributionModalOpen(false);
+        }}
+      />
       
       {/* Settings Modals */}
       <ProfileModal

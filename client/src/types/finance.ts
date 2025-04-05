@@ -14,7 +14,8 @@ export enum ExpenseCategory {
   SavingsAndInvestments = "Savings and Investments",
   EntertainmentAndDining = "Entertainment and Dining Out",
   PetExpenses = "Pet Expenses",
-  Miscellaneous = "Miscellaneous or Emergency Fund"
+  Miscellaneous = "Miscellaneous or Emergency Fund",
+  Savings = "Savings"
 }
 
 // Income Types
