@@ -1075,6 +1075,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
     saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
+    // Automatically propagate changes to all future months in sequence
+    propagateChangesToNextMonth();
+    
     toast({
       title: "Goal Created",
       description: `Your ${goal.type} goal "${goal.name}" has been created`,
@@ -1144,7 +1147,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
     saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
-
+    // Automatically propagate changes to all future months in sequence
+    propagateChangesToNextMonth();
     
     // Format the amount for the toast
     const formattedAmount = new Intl.NumberFormat('en-US', {
@@ -1942,46 +1946,59 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   // Function to propagate data to the immediate next month only
   const updateFutureMonths = async () => {
-    // Find the immediate next month after active month
+    // Find all months after active month
     const sortedMonths = [...months.map(m => m.id)].sort();
     const activeMonthIndex = sortedMonths.indexOf(activeMonth);
     
-    // Check if there is a next month
+    // Check if there are future months
     if (activeMonthIndex < 0 || activeMonthIndex >= sortedMonths.length - 1) {
       toast({
-        title: "No Future Month",
-        description: "There is no immediate next month to update. Add a new month first.",
+        title: "No Future Months",
+        description: "There are no future months to update. Add a new month first.",
         variant: "default"
       });
       return;
     }
     
-    // Get the immediate next month
-    const nextMonth = sortedMonths[activeMonthIndex + 1];
-    
-    // Update only the immediate next month from active month
-    propagateMonthData(activeMonth, nextMonth);
+    // Propagate data sequentially through all future months
+    // Start with the current month and update each subsequent month in order
+    for (let i = activeMonthIndex; i < sortedMonths.length - 1; i++) {
+      const currentMonth = sortedMonths[i];
+      const nextMonth = sortedMonths[i + 1];
+      
+      // Propagate data from current month to next month
+      propagateMonthData(currentMonth, nextMonth);
+    }
     
     toast({
-      title: "Next Month Updated",
-      description: `Successfully updated ${nextMonth} with data from ${activeMonth}.`,
+      title: "All Future Months Updated",
+      description: "All future months have been updated sequentially (January → February → March → etc.)",
       variant: "default"
     });
   };
   
-  // Helper function to propagate changes to the next month (if available)
+  // Helper function to propagate changes to the next month and all subsequent months
   const propagateChangesToNextMonth = () => {
-    // Find the immediate next month after active month
+    // Get all months sorted chronologically
     const sortedMonths = [...months.map(m => m.id)].sort();
     const activeMonthIndex = sortedMonths.indexOf(activeMonth);
     
     // Check if there is a next month
     if (activeMonthIndex >= 0 && activeMonthIndex < sortedMonths.length - 1) {
-      // Get the immediate next month
-      const nextMonth = sortedMonths[activeMonthIndex + 1];
+      // Start with the active month and propagate sequentially to all future months
+      for (let i = activeMonthIndex; i < sortedMonths.length - 1; i++) {
+        const currentMonth = sortedMonths[i];
+        const nextMonth = sortedMonths[i + 1];
+        
+        // Propagate data from current month to next month
+        propagateMonthData(currentMonth, nextMonth);
+      }
       
-      // Update only the immediate next month from active month
-      propagateMonthData(activeMonth, nextMonth);
+      toast({
+        title: "All Future Months Updated",
+        description: "Your changes have been propagated to all future months in sequence",
+        variant: "default"
+      });
     }
   };
   
