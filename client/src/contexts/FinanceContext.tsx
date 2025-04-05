@@ -22,6 +22,7 @@ import {
   MonthData
 } from "../types/finance";
 import { getFromDb, listDbKeys, saveToDb, loadAllFinanceData } from "../utils/database";
+import { formatCurrency } from "@/lib/calculations";
 
 // Default user profile
 const DEFAULT_USER_PROFILE: UserProfile = {
@@ -1054,11 +1055,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   // Goal management
   const addGoal = (goal: Omit<Goal, "id" | "currentAmount">) => {
+    // Calculate the current amount based on the monthly progress if provided
+    // This ensures that existing payments for debt goals are properly counted
+    const monthlyProgress = goal.monthlyProgress || {};
+    const calculatedCurrentAmount = Object.values(monthlyProgress).reduce(
+      (sum, amount) => sum + amount, 0
+    );
+    
     const newGoal: Goal = { 
       ...goal, 
       id: Date.now(),
-      currentAmount: 0,
-      monthlyProgress: {},
+      currentAmount: calculatedCurrentAmount, // Set initial currentAmount based on progress
+      monthlyProgress: monthlyProgress, // Keep any existing monthly progress
       priority: goal.priority || 5 // Set default priority to 5 (medium) if not provided
     };
     
@@ -1078,11 +1086,20 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Automatically propagate changes to all future months in sequence
     propagateChangesToNextMonth();
     
-    toast({
-      title: "Goal Created",
-      description: `Your ${goal.type} goal "${goal.name}" has been created`,
-      variant: "default"
-    });
+    // Show special message for debt goals with existing progress
+    if (goal.type === GoalType.DebtPayoff && calculatedCurrentAmount > 0) {
+      toast({
+        title: "Debt Goal Created",
+        description: `Your goal "${goal.name}" was created with ${formatCurrency(calculatedCurrentAmount)} in existing payments`,
+        variant: "default"
+      });
+    } else {
+      toast({
+        title: "Goal Created",
+        description: `Your ${goal.type} goal "${goal.name}" has been created`,
+        variant: "default"
+      });
+    }
   };
   
   // Add contribution to a goal
