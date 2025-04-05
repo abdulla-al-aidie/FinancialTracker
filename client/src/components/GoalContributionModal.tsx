@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useFinance } from "@/contexts/FinanceContext";
-import { Goal } from "@/types/finance";
+import { Goal, GoalType } from "@/types/finance";
 import { formatCurrency } from "@/lib/calculations";
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
@@ -38,7 +38,10 @@ interface GoalContributionModalProps {
 
 export default function GoalContributionModal({ open, onClose }: GoalContributionModalProps) {
   const { goals, addGoalContribution } = useFinance();
-  const filteredGoals = goals.filter(goal => !goal.completed);
+  // Filter goals to exclude both completed goals and DebtPayoff goals
+  const filteredGoals = goals.filter(goal => 
+    !goal.completed && goal.type !== GoalType.DebtPayoff
+  );
   
   // Form setup
   const form = useForm<GoalContributionFormValues>({
@@ -84,7 +87,7 @@ export default function GoalContributionModal({ open, onClose }: GoalContributio
         <DialogHeader>
           <DialogTitle>Add Contribution to Goal</DialogTitle>
           <DialogDescription>
-            Record a contribution toward one of your savings goals.
+            Record a contribution toward one of your savings goals. Debt payoff goals are managed separately through debt payments.
           </DialogDescription>
         </DialogHeader>
         
