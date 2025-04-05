@@ -1181,6 +1181,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
     saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
+    // Automatically propagate changes to the next month if it exists
+    propagateChangesToNextMonth();
+    
     toast({
       title: "Goal Updated",
       description: `Your goal "${goal.name}" has been updated`,
@@ -1200,6 +1203,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Save to localStorage (both month-specific and for backward compatibility)
     saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
     saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
+    
+    // Automatically propagate changes to the next month if it exists
+    propagateChangesToNextMonth();
     
     toast({
       title: "Goal Deleted",
@@ -1222,6 +1228,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Save to localStorage (both month-specific and for backward compatibility)
     saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
     saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
+    
+    // Automatically propagate changes to the next month if it exists
+    propagateChangesToNextMonth();
     
     toast({
       title: "Debt Added",
@@ -1293,6 +1302,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // For backward compatibility, but don't override the month structure
     saveToLocalStorage("debts", updatedDebts);
     
+    // Automatically propagate changes to the next month if it exists
+    propagateChangesToNextMonth();
+    
     toast({
       title: "Debt Updated",
       description: `Your debt "${debt.name}" has been updated`,
@@ -1312,6 +1324,9 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     // Save to localStorage (both month-specific and for backward compatibility)
     saveToLocalStorage(`debts_${activeMonth}`, updatedDebts);
     saveToLocalStorage("debts", updatedDebts); // For backwards compatibility
+    
+    // Automatically propagate changes to the next month if it exists
+    propagateChangesToNextMonth();
     
     toast({
       title: "Debt Deleted",
@@ -1925,39 +1940,49 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     }
   };
   
-  // Function to propagate data forward when switching months or creating new months
+  // Function to propagate data to the immediate next month only
   const updateFutureMonths = async () => {
-    // Get all months that come after the active month
-    const futureMonths = months
-      .filter(month => month.id > activeMonth)
-      .map(month => month.id)
-      .sort();
+    // Find the immediate next month after active month
+    const sortedMonths = [...months.map(m => m.id)].sort();
+    const activeMonthIndex = sortedMonths.indexOf(activeMonth);
     
-    if (futureMonths.length === 0) {
+    // Check if there is a next month
+    if (activeMonthIndex < 0 || activeMonthIndex >= sortedMonths.length - 1) {
       toast({
-        title: "No Future Months",
-        description: "There are no future months to update. Add a new month first.",
+        title: "No Future Month",
+        description: "There is no immediate next month to update. Add a new month first.",
         variant: "default"
       });
       return;
     }
     
-    // Use the active month as the initial source
-    let sourceMonth = activeMonth;
+    // Get the immediate next month
+    const nextMonth = sortedMonths[activeMonthIndex + 1];
     
-    // For each future month, update it based on the MOST RECENT previous month
-    // This ensures changes propagate sequentially through all future months
-    for (const monthId of futureMonths) {
-      propagateMonthData(sourceMonth, monthId);
-      // After updating, this month becomes the new source for the next iteration
-      sourceMonth = monthId;
-    }
+    // Update only the immediate next month from active month
+    propagateMonthData(activeMonth, nextMonth);
     
     toast({
-      title: "Future Months Updated",
-      description: `Successfully updated ${futureMonths.length} future month(s) with current data.`,
+      title: "Next Month Updated",
+      description: `Successfully updated ${nextMonth} with data from ${activeMonth}.`,
       variant: "default"
     });
+  };
+  
+  // Helper function to propagate changes to the next month (if available)
+  const propagateChangesToNextMonth = () => {
+    // Find the immediate next month after active month
+    const sortedMonths = [...months.map(m => m.id)].sort();
+    const activeMonthIndex = sortedMonths.indexOf(activeMonth);
+    
+    // Check if there is a next month
+    if (activeMonthIndex >= 0 && activeMonthIndex < sortedMonths.length - 1) {
+      // Get the immediate next month
+      const nextMonth = sortedMonths[activeMonthIndex + 1];
+      
+      // Update only the immediate next month from active month
+      propagateMonthData(activeMonth, nextMonth);
+    }
   };
   
   // Helper function to propagate data from one month to another
