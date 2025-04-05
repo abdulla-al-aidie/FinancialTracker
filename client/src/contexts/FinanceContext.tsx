@@ -2194,13 +2194,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const sourceMonthlyPayments = sourceDebt.monthlyPayments || {};
       
       // This is a critical fix for the payment propagation issue
-      // We need to calculate the total of ALL historical payments
+      // We need to calculate the total of payments UP TO the target month
       let totalHistoricalPayments = 0;
       
-      // First, sum ALL payments from the source debt (which should include all history)
+      // First, sum payments from the source debt that are before or equal to target month
       Object.entries(sourceMonthlyPayments).forEach(([monthId, amount]) => {
-        // Include ALL payment history, regardless of month
-        totalHistoricalPayments += amount as number;
+        // ONLY include payments from months that come before or equal to target month
+        if (monthId <= targetMonthId) {
+          totalHistoricalPayments += amount as number;
+        }
       });
       
       // Calculate latest balance using original principal minus total payments
@@ -2213,12 +2215,36 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         latestBalance = 0;
       }
       
-      // Create monthly balance records, preserving history
-      const updatedMonthlyBalances = {
-        ...(sourceDebt.monthlyBalances || {}),
-        // Always set the balance for the target month based on all historical payments
-        [targetMonthId]: latestBalance
-      };
+      // Calculate balances for each month in sequence to ensure chronological consistency
+      const updatedMonthlyBalances = { ...(sourceDebt.monthlyBalances || {}) };
+      
+      // Get all months in chronological order where we have payment data
+      // Using a simple object as a map to avoid Set compatibility issues
+      const monthsMap: Record<string, boolean> = {};
+      Object.keys(sourceMonthlyPayments).forEach(month => { monthsMap[month] = true; });
+      Object.keys(sourceDebt.monthlyBalances || {}).forEach(month => { monthsMap[month] = true; });
+      
+      const allMonthIds = Object.keys(monthsMap).sort();
+      
+      // Calculate running balance for each month sequentially
+      let runningBalance = originalPrincipal;
+      for (const monthId of allMonthIds) {
+        // Apply any payment made in this month
+        if (sourceMonthlyPayments[monthId]) {
+          runningBalance = Math.max(0, runningBalance - sourceMonthlyPayments[monthId]);
+        }
+        
+        // Store balance for this month
+        updatedMonthlyBalances[monthId] = runningBalance;
+        
+        // Stop when we reach target month
+        if (monthId === targetMonthId) {
+          break;
+        }
+      }
+      
+      // Always ensure target month balance is set
+      updatedMonthlyBalances[targetMonthId] = latestBalance;
       
       // Initialize totalPayments with the historical sum from source
       let totalPayments = totalHistoricalPayments;
@@ -2254,11 +2280,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
               totalPayments += amount;
             }
           } else {
-            // For other months in the target's history, only keep them if 
-            // they aren't already in the source (to avoid double-counting)
+            // For other months in the target's history:
+            // 1. Only keep them if they aren't already in the source (to avoid double-counting)
+            // 2. Only include them in payment calculations if they come before or equal to target month
             if (!sourceMonthlyPayments[month]) {
               completePaymentHistory[month] = amount;
-              totalPayments += amount;
+              // ONLY add to totalPayments if this month is before or equal to target month
+              if (month <= targetMonthId) {
+                totalPayments += amount;
+              }
             }
           }
         });
@@ -2269,7 +2299,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           latestBalance = 0;
         }
         
-        // Update the balance for target month
+        // Recalculate all monthly balances with the complete payment history
+        // This ensures consistency across all months
+        // Using Object.keys directly to avoid array spread syntax
+        const allMonths = Object.keys(completePaymentHistory).sort();
+        let runningBalance = originalPrincipal;
+        
+        // For each month in chronological order, calculate the balance
+        for (const monthId of allMonths) {
+          // Apply payment for this month to the running balance
+          if (completePaymentHistory[monthId]) {
+            runningBalance = Math.max(0, runningBalance - completePaymentHistory[monthId]);
+          }
+          
+          // Update the balance for this month
+          updatedMonthlyBalances[monthId] = runningBalance;
+        }
+        
+        // Ensure the target month balance is correctly set
         updatedMonthlyBalances[targetMonthId] = latestBalance;
         
         return {
