@@ -126,6 +126,20 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         monthlyProgress: goal.monthlyProgress || {}, // Preserve existing monthly progress
       });
     } else {
+      // Initialize monthly progress as empty
+      let initialMonthlyProgress = {};
+      
+      // If this is a debt payoff goal with an associated debt, initialize with existing debt payments
+      if (values.type === GoalType.DebtPayoff && values.associatedDebtId) {
+        const selectedDebt = debts.find(debt => debt.id === values.associatedDebtId);
+        
+        // If the debt has existing payments, use them to initialize goal progress
+        if (selectedDebt && selectedDebt.monthlyPayments) {
+          // Copy each monthly payment from the debt to the goal's progress
+          initialMonthlyProgress = { ...selectedDebt.monthlyPayments };
+        }
+      }
+      
       addGoal({
         name: values.name,
         type: values.type,
@@ -134,7 +148,7 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
         description: values.description || "",
         priority: 5, // Default medium priority
         associatedDebtId: values.type === GoalType.DebtPayoff ? values.associatedDebtId : undefined,
-        monthlyProgress: {},
+        monthlyProgress: initialMonthlyProgress,
       });
     }
     
@@ -260,33 +274,62 @@ export default function GoalFormModal({ open, onClose, goal }: GoalFormModalProp
               
               {/* Display the debt dropdown only if goal type is DebtPayoff and debts exist */}
               {watchGoalType === GoalType.DebtPayoff && debts.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="associatedDebtId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Select Debt to Pay Off</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        value={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a debt" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {debts.map((debt) => (
-                            <SelectItem key={debt.id} value={debt.id.toString()}>
-                              {debt.name} - {formatCurrency(debt.balance)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <>
+                  <FormField
+                    control={form.control}
+                    name="associatedDebtId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Select Debt to Pay Off</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          value={field.value?.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a debt" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {debts.map((debt) => (
+                              <SelectItem key={debt.id} value={debt.id.toString()}>
+                                {debt.name} - {formatCurrency(debt.balance)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {/* Show info about existing payments if a debt with payments is selected */}
+                  {(() => {
+                    const debtId = form.getValues("associatedDebtId");
+                    if (debtId !== undefined) {
+                      const selectedDebt = debts.find(debt => debt.id === debtId);
+                      if (selectedDebt && selectedDebt.monthlyPayments) {
+                        const existingPayments = Object.values(selectedDebt.monthlyPayments).reduce(
+                          (sum, amount) => sum + amount, 0
+                        );
+                        
+                        if (existingPayments > 0) {
+                          return (
+                            <div className="rounded-md border p-4 bg-blue-50">
+                              <div className="space-y-1 leading-none">
+                                <p className="font-medium text-blue-800">Existing payments detected</p>
+                                <p className="text-sm text-blue-700">
+                                  {formatCurrency(existingPayments)} in previous payments will be included in goal progress automatically
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                      }
+                    }
+                    return null;
+                  })()}
+                </>
               )}
               
               <FormField
