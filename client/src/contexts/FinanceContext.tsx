@@ -1128,8 +1128,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ...goalToUpdate,
       currentAmount: newCurrentAmount,
       monthlyProgress: updatedMonthlyProgress,
-      // Also update isComplete property if it exists (for backward compatibility)
-      isComplete: isCompleted,
+      // Set completed status
       completed: isCompleted
     };
     
@@ -2088,7 +2087,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       }
       
       // Check if goal is complete based on the cumulative progress
-      const isComplete = totalProgress >= sourceGoal.targetAmount;
+      const isCompleted = totalProgress >= sourceGoal.targetAmount;
       
       if (existingGoal) {
         // If the goal exists in the target month, preserve its own monthly progress
@@ -2114,7 +2113,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         updatedTotalProgress = Math.min(updatedTotalProgress, sourceGoal.targetAmount);
         
         // Check if goal is now complete with the updated progress
-        const updatedIsComplete = updatedTotalProgress >= sourceGoal.targetAmount;
+        const updatedIsCompleted = updatedTotalProgress >= sourceGoal.targetAmount;
         
         return {
           ...sourceGoal,
@@ -2124,15 +2123,15 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           type: sourceGoal.type,                    // Keep goal type from source
           priority: sourceGoal.priority,            // Keep priority from source
           currentAmount: updatedTotalProgress,      // Update with recalculated progress
-          isComplete: updatedIsComplete,            // Update completion status
+          completed: updatedIsCompleted,            // Update completion status
           monthlyProgress: combinedMonthlyProgress  // Use combined monthly progress data
         };
       } else {
         // Goal doesn't exist in target month, create it with cumulative progress up to source month
         return {
           ...sourceGoal,
-          currentAmount: isComplete ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
-          isComplete: isComplete,                  // Mark as complete if target reached
+          currentAmount: isCompleted ? sourceGoal.targetAmount : totalProgress, // Cap at target amount if completed
+          completed: isCompleted,                  // Mark as complete if target reached
           monthlyProgress: { ...sourceGoal.monthlyProgress }  // Copy monthly progress data
         };
       }
@@ -2198,27 +2197,50 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         // If debt exists in target month, get its payment data
         const existingMonthlyPayments = existingDebt.monthlyPayments || {};
         
-        // CRITICAL FIX: Preserve ALL payment history by creating a complete payment record
-        // Start with a deep copy of source monthly payments
-        const completePaymentHistory = { ...sourceMonthlyPayments };
+        // CRITICAL FIX: Create a comprehensive payment history that preserves ALL monthly payment records
+        // First, collect ALL payment records from both source and target months
+        const completePaymentHistory: Record<string, number> = { };
         
-        // Only add target month payment if it exists
-        if (existingMonthlyPayments[targetMonthId]) {
-          const targetMonthPayment = existingMonthlyPayments[targetMonthId];
-          completePaymentHistory[targetMonthId] = targetMonthPayment;
-          
-          // If target month has a payment, add it to total
-          totalPayments += targetMonthPayment as number;
-          
-          // Recalculate balance with target month payment included
-          latestBalance = Math.max(0, originalPrincipal - totalPayments);
-          if (latestBalance <= 0) {
-            latestBalance = 0;
+        // Start by adding ALL source month payments (this includes historical data)
+        Object.entries(sourceMonthlyPayments).forEach(([month, amount]) => {
+          if (typeof amount === 'number') {
+            completePaymentHistory[month] = amount;
           }
+        });
+        
+        // Then add ALL target month payments, which will override source if there's a conflict
+        // This ensures we don't lose any payments made directly in the target month
+        Object.entries(existingMonthlyPayments).forEach(([month, amount]) => {
+          if (typeof amount !== 'number') return;
           
-          // Update the balance for target month
-          updatedMonthlyBalances[targetMonthId] = latestBalance;
+          // For the target month ID specifically, we want to keep any existing payment
+          // as it represents a payment made directly in that month
+          if (month === targetMonthId) {
+            completePaymentHistory[month] = amount;
+            
+            // Add this payment to our total if it's not already counted
+            // (only add it if it wasn't in the source history)
+            if (!sourceMonthlyPayments[month]) {
+              totalPayments += amount;
+            }
+          } else {
+            // For other months in the target's history, only keep them if 
+            // they aren't already in the source (to avoid double-counting)
+            if (!sourceMonthlyPayments[month]) {
+              completePaymentHistory[month] = amount;
+              totalPayments += amount;
+            }
+          }
+        });
+        
+        // Recalculate balance with all payments included
+        latestBalance = Math.max(0, originalPrincipal - totalPayments);
+        if (latestBalance <= 0) {
+          latestBalance = 0;
         }
+        
+        // Update the balance for target month
+        updatedMonthlyBalances[targetMonthId] = latestBalance;
         
         return {
           ...sourceDebt,
@@ -2245,8 +2267,13 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           ...sourceDebt,
           // CRITICAL: Set the main balance field for proper display
           balance: latestBalance,
-          // IMPORTANT: Keep ALL payment history intact
-          monthlyPayments: { ...sourceMonthlyPayments },
+          // IMPORTANT: Keep ALL payment history intact - create properly typed payment history
+          monthlyPayments: Object.entries(sourceMonthlyPayments).reduce((acc: Record<string, number>, [month, amount]) => {
+            if (typeof amount === 'number') {
+              acc[month] = amount;
+            }
+            return acc;
+          }, {}),
           // Set balance for this month
           monthlyBalances: updatedMonthlyBalances,
           // Set total paid amount with ALL historical payments
