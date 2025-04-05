@@ -95,17 +95,20 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Add the current payment to the month
     allPaymentsWithCurrent[paymentMonthId] = (allPaymentsWithCurrent[paymentMonthId] || 0) + paymentAmount;
     
-    // Calculate total paid across all months
-    const totalPaid = Object.values(allPaymentsWithCurrent).reduce(
-      (sum, amount) => sum + amount, 0
-    );
+    // Calculate total paid across ALL months
+    // This is critical to get accurate payment totals
+    let totalPaid = 0;
+    Object.entries(allPaymentsWithCurrent).forEach(([_, amount]) => {
+      totalPaid += amount as number; 
+    });
     
     // New balance = original principal minus total paid
     const newMonthBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
-    // Update the monthly balances record
+    // Update the monthly balances record for the current month
     const updatedMonthlyBalances = {
       ...currentMonthlyBalances,
+      // Set the current month's balance
       [paymentMonthId]: newMonthBalance
     };
     

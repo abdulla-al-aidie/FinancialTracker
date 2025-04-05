@@ -1099,17 +1099,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       return;
     }
     
+    // Extract the YYYY-MM from the contribution date to determine which month
+    // This allows contributions to be added to the correct month even if it's not the active month
+    const dateParts = contribution.date.split('-');
+    const contributionMonthId = dateParts.length >= 2 ? `${dateParts[0]}-${dateParts[1]}` : activeMonth;
+    
     // Create a copy of the goal's monthly progress
     const updatedMonthlyProgress = { 
       ...goalToUpdate.monthlyProgress 
     };
     
-    // Add or update the contribution for the current month
-    const currentContribution = updatedMonthlyProgress[activeMonth] || 0;
-    updatedMonthlyProgress[activeMonth] = currentContribution + contribution.amount;
+    // Add or update the contribution for the appropriate month
+    const currentContribution = updatedMonthlyProgress[contributionMonthId] || 0;
+    updatedMonthlyProgress[contributionMonthId] = currentContribution + contribution.amount;
     
     // Calculate new current amount (sum of all monthly contributions)
-    const newCurrentAmount = Object.values(updatedMonthlyProgress).reduce((sum, amount) => sum + amount, 0);
+    // This ensures that we're counting ALL historical contributions
+    let newCurrentAmount = 0;
+    Object.entries(updatedMonthlyProgress).forEach(([_, amount]) => {
+      newCurrentAmount += amount as number;
+    });
     
     // Check if goal is now completed
     const isCompleted = newCurrentAmount >= goalToUpdate.targetAmount;
@@ -1119,6 +1128,8 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       ...goalToUpdate,
       currentAmount: newCurrentAmount,
       monthlyProgress: updatedMonthlyProgress,
+      // Also update isComplete property if it exists (for backward compatibility)
+      isComplete: isCompleted,
       completed: isCompleted
     };
     
@@ -2148,23 +2159,24 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       const existingDebt = targetDebts.find(d => d.id === sourceDebt.id);
       
       // Get the original principal amount
-      const originalPrincipal = sourceDebt.originalPrincipal;
+      const originalPrincipal = sourceDebt.originalPrincipal || 0;
       
       // Get all payment records (or initialize empty)
       const sourceMonthlyPayments = sourceDebt.monthlyPayments || {};
       
-      // Calculate total payments across ALL months up to and including source month
-      let totalPayments = 0;
-      Object.keys(sourceMonthlyPayments).forEach(monthId => {
-        // Only count payments from months up to the source month
-        if (monthId <= sourceMonthId) {
-          totalPayments += sourceMonthlyPayments[monthId] || 0;
-        }
+      // This is a critical fix for the payment propagation issue
+      // We need to calculate the total of ALL historical payments
+      let totalHistoricalPayments = 0;
+      
+      // First, sum ALL payments from the source debt (which should include all history)
+      Object.entries(sourceMonthlyPayments).forEach(([monthId, amount]) => {
+        // Include ALL payment history, regardless of month
+        totalHistoricalPayments += amount as number;
       });
       
       // Calculate latest balance using original principal minus total payments
       // This is the key calculation that must be correct
-      let latestBalance = Math.max(0, originalPrincipal - totalPayments);
+      let latestBalance = Math.max(0, originalPrincipal - totalHistoricalPayments);
       
       // For fully paid debts, ensure balance is zero
       const isFullyPaid = latestBalance <= 0;
@@ -2172,35 +2184,39 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
         latestBalance = 0;
       }
       
-      // Create/update monthly balance records
+      // Create monthly balance records, preserving history
       const updatedMonthlyBalances = {
         ...(sourceDebt.monthlyBalances || {}),
-        // Always set the balance for the target month
+        // Always set the balance for the target month based on all historical payments
         [targetMonthId]: latestBalance
       };
       
+      // Initialize totalPayments with the historical sum from source
+      let totalPayments = totalHistoricalPayments;
+      
       if (existingDebt) {
-        // If debt exists in target month, we need to merge the payment data
+        // If debt exists in target month, get its payment data
         const existingMonthlyPayments = existingDebt.monthlyPayments || {};
         
-        // Combine all payment records, keeping any existing target month payments
-        const combinedMonthlyPayments = {
-          ...sourceMonthlyPayments, 
-          ...existingMonthlyPayments
-        };
+        // CRITICAL FIX: Preserve ALL payment history by creating a complete payment record
+        // Start with a deep copy of source monthly payments
+        const completePaymentHistory = { ...sourceMonthlyPayments };
         
-        // Recalculate total payments including any in target month
-        let updatedTotalPayments = totalPayments;
+        // Only add target month payment if it exists
         if (existingMonthlyPayments[targetMonthId]) {
-          updatedTotalPayments += existingMonthlyPayments[targetMonthId];
+          const targetMonthPayment = existingMonthlyPayments[targetMonthId];
+          completePaymentHistory[targetMonthId] = targetMonthPayment;
           
-          // Recalculate balance with target month payments included
-          latestBalance = Math.max(0, originalPrincipal - updatedTotalPayments);
+          // If target month has a payment, add it to total
+          totalPayments += targetMonthPayment as number;
+          
+          // Recalculate balance with target month payment included
+          latestBalance = Math.max(0, originalPrincipal - totalPayments);
           if (latestBalance <= 0) {
             latestBalance = 0;
           }
           
-          // Update the balance for the target month
+          // Update the balance for target month
           updatedMonthlyBalances[targetMonthId] = latestBalance;
         }
         
@@ -2215,26 +2231,26 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
           priority: sourceDebt.priority,
           // CRITICAL: Set the main balance field for the target month
           balance: latestBalance,
-          // Use the combined payment and balance records
-          monthlyPayments: combinedMonthlyPayments,
+          // CRITICAL: Use complete payment history with all months preserved
+          monthlyPayments: completePaymentHistory,
           monthlyBalances: updatedMonthlyBalances,
-          // Update total paid amount
-          totalPaid: updatedTotalPayments,
+          // Update total paid with ALL payments
+          totalPaid: totalPayments,
           // Update paid off status
           isPaidOff: latestBalance <= 0
         };
       } else {
-        // Debt doesn't exist in target month, create it with source data + calculated balance
+        // Debt doesn't exist in target month, create it with complete source data
         return {
           ...sourceDebt,
           // CRITICAL: Set the main balance field for proper display
           balance: latestBalance,
-          // Keep all payment history
+          // IMPORTANT: Keep ALL payment history intact
           monthlyPayments: { ...sourceMonthlyPayments },
           // Set balance for this month
           monthlyBalances: updatedMonthlyBalances,
-          // Set total paid amount
-          totalPaid: totalPayments,
+          // Set total paid amount with ALL historical payments
+          totalPaid: totalHistoricalPayments,
           // Mark as paid off if fully paid
           isPaidOff: isFullyPaid
         };
