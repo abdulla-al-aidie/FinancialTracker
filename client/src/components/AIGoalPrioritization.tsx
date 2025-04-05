@@ -97,20 +97,20 @@ export default function AIGoalPrioritization() {
     const priorityValue = priority !== undefined ? priority : 5;
     
     if (priorityValue >= 8) {
-      return <Badge className="bg-red-500 hover:bg-red-600">Critical Priority: {priorityValue}/10</Badge>;
+      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
     } else if (priorityValue >= 5) {
-      return <Badge className="bg-amber-500 hover:bg-amber-600">Medium Priority: {priorityValue}/10</Badge>;
+      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
     } else {
-      return <Badge className="bg-green-500 hover:bg-green-600">Low Priority: {priorityValue}/10</Badge>;
+      return <Badge variant="outline">Priority: {priorityValue}/10</Badge>;
     }
   };
 
   // Function to render goal type badge
   const renderGoalTypeBadge = (type: GoalType) => {
     if (type === GoalType.Saving) {
-      return <Badge className="bg-blue-500 hover:bg-blue-600">Saving</Badge>;
+      return <Badge variant="secondary">Saving</Badge>;
     } else {
-      return <Badge className="bg-purple-500 hover:bg-purple-600">Debt Payoff</Badge>;
+      return <Badge variant="secondary">Debt Payoff</Badge>;
     }
   };
 
