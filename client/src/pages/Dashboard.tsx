@@ -665,11 +665,11 @@ export default function Dashboard() {
                       </div>
                       
                       {/* Filter expenses to find ones with category of "Savings" */}
-                      {expenses.filter(expense => expense.category === "Savings").length > 0 ? (
+                      {expenses.filter(expense => expense.category === ExpenseCategory.Savings).length > 0 ? (
                         <div className="space-y-4 mt-4">
                           {/* Show savings contributions sorted by date */}
                           {expenses
-                            .filter(expense => expense.category === "Savings")
+                            .filter(expense => expense.category === ExpenseCategory.Savings)
                             .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                             .map((expense) => (
                               <div 
