@@ -603,25 +603,26 @@ ${monthData.expenses.map((exp: { category: string; amount: number; date: string;
         Structure your response in the following way:
         1. START with a concise, direct answer paragraph that summarizes the key information (this will be displayed prominently)
         
-        2. THEN add 2-3 clear sections with this exact format:
+        2. THEN add 2-3 clear sections with this EXACT format:
            • Section Title
            
-           Explanatory text if needed
+           [Optional] A brief paragraph of explanatory text if needed.
            
            • First bullet point
            • Second bullet point
            • Third bullet point
         
-        3. You MUST format section titles exactly as "• Section Title" (with the bullet point)
+        3. End with a section titled "• Key Takeaways" with 2-3 bullet points summarizing the most important information
         
-        4. End with a section titled "• Key Takeaways" with 2-3 bullet points summarizing the most important information
-        
-        IMPORTANT FORMATTING RULES:
-        - Each section must be separated by two newlines (\\n\\n)
-        - Use a single bullet point (•) at the start of each section title
-        - Use bullet points (•) for lists, not asterisks, numbers, or dashes
-        - Don't use markdown formatting like bold, italics, headers (###), etc.
-        - Don't use phrases like "In conclusion" or "To summarize"
+        CRITICAL FORMATTING REQUIREMENTS:
+        - Each section must be separated by exactly two newlines (\\n\\n)
+        - ALL bullet points must start with the bullet character "•" followed by a space
+        - Section titles MUST be formatted as "• Section Title" (with the bullet point)
+        - NEVER embed bullets within paragraphs; they must be on separate lines
+        - ALL lists must have each item on its own line, starting with "• "
+        - Do NOT use any other list formats (no numbers, dashes, asterisks, etc.)
+        - Do NOT use markdown formatting
+        - Keep paragraphs concise and separate from bullet points
       `;
 
       const response = await openaiClient.chat.completions.create({

@@ -132,14 +132,14 @@ export default function KnowledgeHub() {
                 </div>
 
                 {answer && (
-                  <Card className="mt-4 bg-gradient-to-br from-blue-50 to-slate-50 shadow-md">
-                    <CardHeader className="pb-2 border-b">
-                      <CardTitle className="text-lg flex items-center">
+                  <Card className="mt-4 bg-gradient-to-br from-blue-50 to-slate-50 shadow-md border-blue-100">
+                    <CardHeader className="pb-2 border-b border-blue-100/50">
+                      <CardTitle className="text-lg flex items-center text-primary">
                         <GraduationCap className="h-5 w-5 mr-2 text-primary" />
                         Financial Insight
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4">
+                    <CardContent className="pt-5 px-5">
                       <div className="prose prose-slate max-w-none">
                         {/* Process the answer to create a consistent, aesthetically pleasing format */}
                         {(() => {
@@ -178,29 +178,52 @@ export default function KnowledgeHub() {
                                     
                                     // Check if first line is a heading
                                     const firstLine = lines[0];
-                                    const restLines = lines.slice(1);
+                                    const restLines = lines.slice(1).filter(line => line.trim());
+                                    
+                                    // Check if all rest lines are bullet points
+                                    const allBullets = restLines.every(line => line.trim().startsWith('• '));
                                     
                                     return (
                                       <div key={`list-${idx}`} className="space-y-1">
                                         {firstLine.startsWith('• ') ? (
+                                          // It's a section heading
                                           <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2 border-b pb-1">
                                             {firstLine.replace(/^•\s+/, '')}
                                           </h3>
                                         ) : (
-                                          <p>{firstLine}</p>
+                                          // Regular paragraph text
+                                          <p className="mb-2">{firstLine}</p>
                                         )}
-                                        <ul className="space-y-2 pl-2 mt-2">
-                                          {restLines.map((line, lineIdx) => 
-                                            line.startsWith('• ') ? (
+                                        
+                                        {allBullets ? (
+                                          // Proper bullet list with consistent formatting
+                                          <ul className="space-y-2 pl-2 mt-3 mb-4">
+                                            {restLines.map((line, lineIdx) => (
                                               <li key={`bullet-${lineIdx}`} className="flex items-start">
-                                                <span className="text-primary mr-2 mt-1">•</span>
-                                                <span>{line.replace(/^•\s+/, '')}</span>
+                                                <div className="flex-shrink-0 rounded-full bg-primary/10 w-5 h-5 flex items-center justify-center mr-3">
+                                                  <span className="text-primary text-xs">•</span>
+                                                </div>
+                                                <span className="flex-1">{line.replace(/^•\s+/, '')}</span>
                                               </li>
-                                            ) : (
-                                              <p key={`text-${lineIdx}`}>{line}</p>
-                                            )
-                                          )}
-                                        </ul>
+                                            ))}
+                                          </ul>
+                                        ) : (
+                                          // Mixed content - process each line appropriately
+                                          <div className="space-y-2">
+                                            {restLines.map((line, lineIdx) => 
+                                              line.startsWith('• ') ? (
+                                                <div key={`bullet-item-${lineIdx}`} className="flex items-start pl-2">
+                                                  <div className="flex-shrink-0 rounded-full bg-primary/10 w-5 h-5 flex items-center justify-center mr-3">
+                                                    <span className="text-primary text-xs">•</span>
+                                                  </div>
+                                                  <span className="flex-1">{line.replace(/^•\s+/, '')}</span>
+                                                </div>
+                                              ) : (
+                                                <p key={`text-${lineIdx}`} className="my-1">{line}</p>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   }
@@ -208,15 +231,17 @@ export default function KnowledgeHub() {
                                   // Handle single bullet points
                                   if (paragraph.startsWith('• ')) {
                                     return (
-                                      <div key={`single-bullet-${idx}`} className="flex items-start">
-                                        <span className="text-primary mr-2 mt-1">•</span>
-                                        <span>{paragraph.replace(/^•\s+/, '')}</span>
+                                      <div key={`single-bullet-${idx}`} className="flex items-start pl-2">
+                                        <div className="flex-shrink-0 rounded-full bg-primary/10 w-5 h-5 flex items-center justify-center mr-3">
+                                          <span className="text-primary text-xs">•</span>
+                                        </div>
+                                        <span className="flex-1">{paragraph.replace(/^•\s+/, '')}</span>
                                       </div>
                                     );
                                   }
                                   
                                   // Regular paragraphs
-                                  return <p key={`para-${idx}`}>{paragraph}</p>;
+                                  return <p key={`para-${idx}`} className="my-2">{paragraph}</p>;
                                 })}
                               </div>
                             </>
