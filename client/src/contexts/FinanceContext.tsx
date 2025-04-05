@@ -1119,6 +1119,18 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
       completed: isCompleted
     };
     
+    // Create a corresponding expense entry for this contribution
+    const expenseData = {
+      id: Date.now(),
+      amount: contribution.amount,
+      date: contribution.date,
+      category: ExpenseCategory.Savings,
+      description: `Contribution to ${goalToUpdate.name}${contribution.notes ? `: ${contribution.notes}` : ''}`,
+    };
+    
+    // Add the expense to track this savings contribution
+    addExpense(expenseData);
+    
     // Update goals array
     const updatedGoals = goals.map(g => g.id === contribution.goalId ? updatedGoal : g);
     
@@ -1132,13 +1144,7 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
     saveToLocalStorage(`goals_${activeMonth}`, updatedGoals);
     saveToLocalStorage("goals", updatedGoals); // For backwards compatibility
     
-    // Create expense entry for this contribution
-    addExpense({
-      amount: contribution.amount,
-      category: ExpenseCategory.SavingsAndInvestments,
-      date: contribution.date,
-      description: `Contribution to: ${goalToUpdate.name}${contribution.notes ? ` - ${contribution.notes}` : ''}`,
-    });
+
     
     // Format the amount for the toast
     const formattedAmount = new Intl.NumberFormat('en-US', {
