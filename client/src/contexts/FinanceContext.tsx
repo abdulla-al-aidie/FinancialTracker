@@ -2004,8 +2004,16 @@ export function FinanceProvider({ children }: { children: ReactNode }) {
   
   // Helper function to propagate data from one month to another
   const propagateMonthData = (sourceMonthId: string, targetMonthId: string) => {
-    if (!sourceMonthId || !targetMonthId || sourceMonthId >= targetMonthId) {
-      // Don't propagate to the past or the same month
+    if (!sourceMonthId || !targetMonthId) {
+      return;
+    }
+    
+    // Special handling for December to January transition (year rollover)
+    const isYearRollover = sourceMonthId.endsWith('-12') && targetMonthId.endsWith('-01');
+    
+    // For year rollovers, we allow propagation, otherwise enforce chronological order
+    if (!isYearRollover && sourceMonthId >= targetMonthId) {
+      // Don't propagate to the past or the same month unless it's December to January
       return;
     }
     
