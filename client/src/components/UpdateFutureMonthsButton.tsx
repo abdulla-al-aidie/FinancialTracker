@@ -48,7 +48,7 @@ export default function UpdateFutureMonthsButton() {
         variant="outline"
         className="w-full"
       >
-        {isUpdating ? "Updating Months..." : "Propagate All Months Sequentially"}
+        {isUpdating ? "Updating Months..." : "Update All Future Months Sequentially"}
       </Button>
       
       <TooltipProvider>

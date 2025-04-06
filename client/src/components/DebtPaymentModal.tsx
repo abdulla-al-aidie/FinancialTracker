@@ -72,6 +72,7 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     });
     
     // Calculate current balance based on total payments
+    // Note: This balance will be properly recalculated in propagateMonthData for all months
     const newMonthBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
     // Update all monthly balances for the current and future months
