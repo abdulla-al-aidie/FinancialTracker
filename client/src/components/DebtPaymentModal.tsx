@@ -56,48 +56,42 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
     // Initialize monthlyPayments if it doesn't exist
     const currentMonthlyPayments = debt.monthlyPayments || {};
     
-    // IMPORTANT: Add payment to the monthly payment record
+    // Add payment to the monthly payment record for the given month
     const updatedMonthlyPayments = {
       ...currentMonthlyPayments,
       [paymentMonthId]: (currentMonthlyPayments[paymentMonthId] || 0) + paymentAmount
     };
     
-    // Initialize monthly balances if it doesn't exist
-    const currentMonthlyBalances = debt.monthlyBalances || {};
-    
     // Calculate total paid across ALL months including the new payment
     let totalPaid = 0;
-    Object.entries(updatedMonthlyPayments).forEach(([_, amount]) => {
-      totalPaid += amount as number; 
+    Object.values(updatedMonthlyPayments).forEach((amount) => {
+      totalPaid += amount as number;
     });
     
-    // Calculate current balance based on total payments
-    const newMonthBalance = Math.max(0, debt.originalPrincipal - totalPaid);
+    // Calculate overall new balance based on total payments
+    const newBalance = Math.max(0, debt.originalPrincipal - totalPaid);
     
-    // Update all monthly balances for the current and future months
-    // This ensures the balance is updated consistently
-    const updatedMonthlyBalances = {
-      ...currentMonthlyBalances,
-      // Set the current month's balance
-      [paymentMonthId]: newMonthBalance
-    };
+    // Recalculate monthly balances for all months in order.
+    // For each month, subtract the cumulative payments to get the balance.
+    const updatedMonthlyBalances: { [key: string]: number } = {};
+    let cumulativePayments = 0;
+    const sortedMonthIds = Object.keys(updatedMonthlyPayments).sort(); // e.g., "2023-04", "2023-05", etc.
+    for (const monthId of sortedMonthIds) {
+      cumulativePayments += updatedMonthlyPayments[monthId];
+      updatedMonthlyBalances[monthId] = Math.max(0, debt.originalPrincipal - cumulativePayments);
+    }
     
     // Update the debt with the new balance and monthly tracking data
     const updatedDebt = {
       ...debt,
-      // Always update the main balance field for proper display
-      balance: newMonthBalance,
-      // Also update the total paid amount
+      balance: newBalance,
       totalPaid: totalPaid,
-      // Mark as paid off if completely paid
-      isPaidOff: newMonthBalance <= 0,
-      // Track payments and balances by month
+      isPaidOff: newBalance <= 0,
       monthlyPayments: updatedMonthlyPayments,
       monthlyBalances: updatedMonthlyBalances
     };
     
-    // First create an expense entry for the payment with associatedDebtId
-    // Do this before updating the debt to avoid circular updates
+    // Create an expense entry for the payment
     addExpense({
       amount: paymentAmount,
       date: paymentDate,
@@ -106,23 +100,18 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       associatedDebtId: debt.id
     });
     
-    // If there's a related goal, always apply payment to the goal
+    // If there's a related goal, update its progress as well
     if (relatedGoal) {
-      // Initialize monthly progress if it doesn't exist
       const goalMonthlyProgress = relatedGoal.monthlyProgress || {};
-      
-      // Add payment to monthly goal progress
       const updatedGoalMonthlyProgress = {
         ...goalMonthlyProgress,
         [paymentMonthId]: (goalMonthlyProgress[paymentMonthId] || 0) + paymentAmount
       };
       
-      // Recalculate total goal progress (sum of all monthly progress)
       const newCurrentAmount = Object.values(updatedGoalMonthlyProgress).reduce(
         (sum, amount) => sum + (amount as number), 0
       );
       
-      // Update goal with new monthly progress and recalculated current amount
       updateGoal({
         ...relatedGoal,
         currentAmount: newCurrentAmount,
@@ -131,7 +120,6 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
       });
     }
     
-    // After handling related goal updates, update the debt (which triggers propagation)
     updateDebt(updatedDebt);
     
     onClose();
@@ -168,15 +156,12 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
                   </FormControl>
                   <FormDescription>
                     Current balance: ${(() => {
-                      // Get monthly data from debt
                       const { monthlyBalances, monthlyPayments, originalPrincipal } = debt;
                       
-                      // If we have a month-specific balance for the active month, use that
                       if (monthlyBalances && activeMonth && monthlyBalances[activeMonth] !== undefined) {
                         return monthlyBalances[activeMonth].toFixed(2);
                       }
                       
-                      // Otherwise calculate from payments
                       const allPayments = monthlyPayments || {};
                       const totalPaid = Object.values(allPayments).reduce(
                         (sum, amount) => sum + amount, 0
@@ -230,7 +215,7 @@ export default function DebtPaymentModal({ open, onClose, debt }: DebtPaymentMod
               )}
             />
             
-            {/* Show informational message if there's a related goal */}
+            {/* Informational message for related goal */}
             {relatedGoal && (
               <div className="rounded-md border p-4 bg-blue-50">
                 <div className="space-y-1 leading-none">
