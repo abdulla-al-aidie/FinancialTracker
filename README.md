@@ -3,36 +3,35 @@
 
 A comprehensive personal finance management application built with React, TypeScript, and Express. Track your income, expenses, debts, and financial goals with AI-powered insights and recommendations.
 
+## Project Structure
+
+```
+├── client/                   # Frontend React application
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   │   ├── ui/         # Reusable UI components
+│   │   │   └── ...         # Feature-specific components
+│   │   ├── contexts/       # React context providers
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── lib/           # Utility functions and API clients
+│   │   ├── pages/         # Page components
+│   │   ├── types/         # TypeScript type definitions
+│   │   └── utils/         # Helper functions
+├── server/                  # Backend Express server
+│   ├── routes.ts           # API route definitions
+│   ├── storage.ts          # Data storage logic
+│   └── index.ts            # Server entry point
+└── shared/                 # Shared code between client and server
+    └── schema.ts           # Database schema definitions
+```
+
 ## Features
 
-### Financial Dashboard
-- Track income and expenses with detailed categorization
-- Monitor net cashflow and savings rate
-- Visual breakdown of spending patterns
-- Monthly financial summaries
-
-### Debt Management
-- Track multiple debts with interest rates and payment schedules
-- Payment history tracking
-- Debt payoff progress visualization
-- Smart debt prioritization recommendations
-
-### Goal Setting & Tracking
-- Create and monitor financial goals
-- AI-powered goal prioritization
-- Progress tracking with visual indicators
-- Goal contribution system
-
-### AI-Powered Insights
-- Financial health assessment
-- Personalized spending optimization recommendations
-- Surplus funds allocation advice
-- Actionable financial recommendations
-
-### Knowledge Hub
-- Educational resources on personal finance
-- AI-assisted financial learning
-- Topics covering investments, debt management, budgeting, and tax planning
+- **Financial Dashboard**: Track income, expenses, and net cashflow
+- **Debt Management**: Track debts with interest rates and payment schedules
+- **Goal Setting & Tracking**: Create and monitor financial goals
+- **AI-Powered Insights**: Get personalized financial recommendations
+- **Knowledge Hub**: Access financial education resources
 
 ## Tech Stack
 
@@ -42,51 +41,90 @@ A comprehensive personal finance management application built with React, TypeSc
 - Data Visualization: Recharts
 - Email Notifications: SendGrid
 
-## Setup Instructions
+## Prerequisites
 
-1. First, ensure you have Node.js installed (version 18+ recommended)
+- Node.js 18+ installed
+- OpenAI API key for AI features
+- SendGrid API key for email notifications
 
-2. Install project dependencies:
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd minty-finance-tracker
+```
+
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. Configure environment variables:
-   - Go to the Secrets tab in your Replit workspace
-   - Add the following secrets:
-     - `OPENAI_API_KEY`: Your OpenAI API key for AI features
-     - `SENDGRID_API_KEY`: SendGrid API key for email notifications
-     - `SESSION_SECRET`: A random string for session security
+3. Create environment variables:
+Create a `.env` file in the root directory with:
+```
+OPENAI_API_KEY=your_openai_api_key
+SENDGRID_API_KEY=your_sendgrid_api_key
+SESSION_SECRET=your_session_secret
+```
 
-4. Start the development server:
+## Development
+
+1. Start the development server:
 ```bash
 npm run dev
 ```
 
-5. Load sample data (optional):
-   - Click the "Load Sample Data" button in the dashboard
-   - This will populate your account with example transactions, budgets, and goals
+The application will be available at `http://localhost:5000`
 
-The application will be running on port 5000. The development server includes:
-- Hot reloading for React components
-- Automatic TypeScript compilation
-- Express API server
-- Database connectivity
+## Project Architecture
 
-### Development Tips
+### Frontend
 
-- Use the AI Insights feature to get personalized financial recommendations
-- Test email notifications with the SendGrid integration
-- Check the console for API logs and debugging information
-- Use the Knowledge Hub for learning about personal finance concepts
+- Uses React with TypeScript for type safety
+- State management through React Context
+- Styled with TailwindCSS and Shadcn/UI components
+- Real-time data visualization with Recharts
+
+### Backend
+
+- Express.js server handling API requests
+- OpenAI integration for financial insights
+- Replit Database for data persistence
+- RESTful API endpoints for:
+  - User profiles
+  - Financial transactions
+  - Goals and budgets
+  - AI-powered recommendations
+
+### Data Flow
+
+1. User interactions trigger React component updates
+2. Components call API endpoints through service functions
+3. Express routes handle requests and interact with storage
+4. Data is persisted in Replit Database
+5. Real-time updates are reflected in the UI
+
+## API Endpoints
+
+The server exposes RESTful endpoints for:
+
+- `/api/user-profile`: User profile management
+- `/api/months`: Month data management
+- `/api/incomes`: Income tracking
+- `/api/expenses`: Expense management
+- `/api/budgets`: Budget setting
+- `/api/goals`: Financial goals
+- `/api/debts`: Debt tracking
+- `/api/openai/*`: AI-powered insights
 
 ## Environment Variables
 
-The following environment variables are required:
+Required environment variables:
 
-- `OPENAI_API_KEY`: Your OpenAI API key for AI features
-- `SENDGRID_API_KEY`: SendGrid API key for email notifications
-- `SESSION_SECRET`: Secret key for session management
+- `OPENAI_API_KEY`: Your OpenAI API key
+- `SENDGRID_API_KEY`: SendGrid API key for email
+- `SESSION_SECRET`: Secret for session management
 
 ## License
 
