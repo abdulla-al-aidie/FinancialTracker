@@ -804,7 +804,7 @@ export default function Dashboard() {
                               } as React.CSSProperties}
                             />
                             
-                            {/* Payment summary - show both total and monthly */}
+                            {/* Payment summary - show all payment information */}
                             <div className="flex justify-between text-xs mt-2">
                               <div>
                                 <span className="text-gray-500 mr-1">Repaid:</span>
@@ -827,6 +827,28 @@ export default function Dashboard() {
                                 </div>
                               )}
                             </div>
+                            
+                            {/* Previous months' payments (excluding current month) */}
+                            {debt.monthlyPayments && Object.keys(debt.monthlyPayments).length > 0 && (
+                              <div className="mt-2 text-xs">
+                                <details className="cursor-pointer">
+                                  <summary className="text-gray-500 font-medium">
+                                    Payment History
+                                  </summary>
+                                  <div className="mt-1 pl-2 space-y-1 border-l-2 border-gray-100">
+                                    {Object.entries(debt.monthlyPayments)
+                                      .filter(([month, amount]) => month !== activeMonth && (amount as number) > 0)
+                                      .sort((a, b) => b[0].localeCompare(a[0])) // Sort by month, newest first
+                                      .map(([month, amount]) => (
+                                        <div key={month} className="flex justify-between">
+                                          <span className="text-gray-500">{month}:</span>
+                                          <span className="font-medium">{formatCurrency(amount as number)}</span>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </details>
+                              </div>
+                            )}
                           </div>
                           
                           <div className="mt-3 grid grid-cols-2 gap-4">
@@ -841,13 +863,23 @@ export default function Dashboard() {
                                   
                                   // If no month-specific balance, calculate it from monthly payments
                                   const monthlyPayments = debt.monthlyPayments || {};
-                                  // Sum all payments to get total paid
-                                  const totalPaid = Object.values(monthlyPayments).reduce(
-                                    (sum, amount) => sum + amount, 0
+                                  
+                                  // First sort months chronologically (oldest first)
+                                  const sortedMonths = Object.keys(monthlyPayments).sort((a, b) => 
+                                    a.localeCompare(b)
                                   );
                                   
-                                  // Return original balance minus total payments
-                                  return Math.max(0, debt.originalPrincipal - totalPaid);
+                                  // Calculate balance by applying payments in chronological order
+                                  let remainingBalance = debt.originalPrincipal;
+                                  for (const month of sortedMonths) {
+                                    // Only count payments from months up to active month
+                                    if (month <= activeMonth) {
+                                      remainingBalance -= monthlyPayments[month];
+                                    }
+                                  }
+                                  
+                                  // Return calculated balance ensuring it's not negative
+                                  return Math.max(0, remainingBalance);
                                 })())}
                               </p>
                             </div>
